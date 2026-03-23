@@ -6,7 +6,7 @@
 // ── OpenAI Stimme ─────────────────────────────────────────
 // Optionen: alloy, echo, fable, onyx, nova, shimmer
 // nova = hell, energetisch — beste Wahl für Blibu
-export const VOICE = "nova";
+export const VOICE = "shimmer";
 
 // ── OpenAI Modell ─────────────────────────────────────────
 export const REALTIME_MODEL = "gpt-4o-realtime-preview-2024-12-17";
