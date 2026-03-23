@@ -9,7 +9,9 @@
 export const VOICE = "shimmer";
 
 // ── OpenAI Modell ─────────────────────────────────────────
-export const REALTIME_MODEL = "gpt-4o-realtime-preview-2024-12-17";
+//export const REALTIME_MODEL = "gpt-4o-realtime-preview-2024-12-17";
+export const REALTIME_MODEL = "gpt-realtime-mini-2025-12-15";  // oder "gpt-realtime-1.5" wenn verfügbar
+// Alternativen: "gpt-4o-realtime-preview-2025-06-03" oder was in https://platform.openai.com/docs/models steht
 
 // ── Spracherkennung ───────────────────────────────────────
 export const VAD_CONFIG = {
