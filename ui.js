@@ -20,7 +20,7 @@ const pr      = document.getElementById("pr");  // rechte Pupille
 // CSS-Klassen steuern die Animationen (definiert in index.html)
 // Mögliche States: "" | "happy" | "thinking" | "listening"
 export function setAnim(state) {
-  bsvg.className = "bsvg " + (state || "");
+  bsvg.setAttribute("class", "bsvg " + (state || ""));
 }
 
 // ── Mic-Button Farben ─────────────────────────────────────
