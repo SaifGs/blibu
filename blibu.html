@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#d4f3e8">
+<title>Blibu</title>
+<link rel="manifest" href="manifest.json">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #d4f3e8; font-family: "Fredoka One", cursive; touch-action: none; }
+  .app { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(ellipse at 25% 20%, #b8eeda, transparent 55%), radial-gradient(ellipse at 75% 85%, #a8e4f0, transparent 55%), #d4f3e8; position: relative; overflow: hidden; }
+  .name { position: absolute; top: 1.2rem; font-size: clamp(1.6rem, 5vw, 2.4rem); color: #085041; letter-spacing: 3px; text-shadow: 2px 2px 0 #9FE1CB; animation: nw 3s ease-in-out infinite; opacity: 0.75; user-select: none; }
+  @keyframes nw { 0%,100%{transform:rotate(-1deg)} 50%{transform:rotate(1deg)} }
+  .char { cursor: pointer; user-select: none; display: flex; align-items: center; justify-content: center; flex: 1; width: 100%; }
+  .bsvg { height: min(72vh, 460px); width: auto; filter: drop-shadow(0 10px 30px rgba(13,80,65,.2)); animation: bob 2.6s ease-in-out infinite; transform-origin: center bottom; }
+  .bsvg.happy { animation: wig .45s ease-in-out 3, bob 2.6s ease-in-out .45s infinite; }
+  .bsvg.thinking { animation: thk 1.8s ease-in-out infinite; }
+  .bsvg.listening { animation: lst 1s ease-in-out infinite; }
+  @keyframes bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
+  @keyframes wig { 0%{transform:rotate(0)} 25%{transform:rotate(-11deg) scale(1.1)} 75%{transform:rotate(11deg) scale(1.1)} 100%{transform:rotate(0)} }
+  @keyframes thk { 0%,100%{transform:rotate(-4deg)} 50%{transform:rotate(4deg) translateY(-7px)} }
+  @keyframes lst { 0%,100%{transform:scale(1)} 50%{transform:scale(1.04)} }
+  .mic-wrap { position: absolute; bottom: 1.8rem; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .mic { width: 80px; height: 80px; border-radius: 50%; background: #1D9E75; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 24px rgba(29,158,117,.4); transition: transform .12s, background .2s, opacity .4s; opacity: 0; pointer-events: none; }
+  .mic.ready { opacity: 1; pointer-events: all; }
+  .mic:active { transform: scale(.91); }
+  .mic.connected { background: #1D9E75; }
+  .mic.user-talking { background: #E24B4A; animation: pulse 1.1s ease-out infinite; }
+  .mic.blibu-talking { background: #EF9F27; }
+  .mic svg { width: 36px; height: 36px; fill: white; }
+  @keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(226,75,74,.55)} 70%{box-shadow:0 0 0 22px rgba(226,75,74,0)} 100%{box-shadow:0 0 0 0 rgba(226,75,74,0)} }
+  .rings { position: absolute; bottom: 1.8rem; width: 80px; height: 80px; pointer-events: none; display: none; }
+  .rings.show { display: block; }
+  .ring { position: absolute; inset: 0; border-radius: 50%; border: 2px solid #E24B4A; opacity: 0; animation: ring 1.5s ease-out infinite; }
+  .ring:nth-child(2){ animation-delay: .4s; }
+  .ring:nth-child(3){ animation-delay: .8s; }
+  @keyframes ring { 0%{transform:scale(1);opacity:.7} 100%{transform:scale(2.6);opacity:0} }
+  .mic-status { font-size: clamp(.7rem, 2vw, .9rem); color: #085041; opacity: .6; min-height: 1.2em; text-align: center; }
+
+  /* Papa Setup Overlay */
+  .overlay { position: fixed; inset: 0; z-index: 100; background: rgba(8,80,65,.94); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+  .overlay.hidden { display: none; }
+  .setup-box { background: white; border-radius: 24px; padding: 2rem 1.8rem; max-width: 400px; width: 92%; text-align: center; }
+  .setup-box h2 { font-size: 2rem; color: #085041; margin-bottom: .4rem; }
+  .setup-box p { font-family: sans-serif; color: #555; font-size: .92rem; line-height: 1.55; margin-bottom: 1.2rem; }
+  .setup-box input { width: 100%; border: 2px solid #9FE1CB; border-radius: 12px; padding: 12px 14px; font-size: .95rem; font-family: sans-serif; color: #085041; margin-bottom: .75rem; outline: none; }
+  .setup-box input:focus { border-color: #1D9E75; }
+  .setup-box .save-btn { background: #1D9E75; color: white; border: none; border-radius: 50px; padding: 12px 32px; font-family: "Fredoka One", cursive; font-size: 1.2rem; cursor: pointer; width: 100%; }
+  .setup-box .err { font-family: sans-serif; font-size: .82rem; color: #E24B4A; min-height: 1.1em; margin-top: .4rem; }
+  .setup-box .hint { font-family: sans-serif; font-size: .75rem; color: #aaa; margin-top: .75rem; line-height: 1.4; }
+  .setup-box .reset-link { font-family: sans-serif; font-size: .75rem; color: #1D9E75; cursor: pointer; margin-top: .5rem; display: inline-block; text-decoration: underline; }
+
+  /* Log Overlay */
+  .log-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,.88); display: flex; flex-direction: column; font-family: monospace; }
+  .log-overlay.hidden { display: none; }
+  .log-header { background: #085041; color: #9FE1CB; padding: .75rem 1rem; font-size: .9rem; display: flex; justify-content: space-between; align-items: center; font-family: "Fredoka One", cursive; }
+  .log-header button { background: #E24B4A; color: white; border: none; border-radius: 8px; padding: 4px 14px; font-family: "Fredoka One", cursive; font-size: .9rem; cursor: pointer; }
+  .log-body { flex: 1; overflow-y: auto; padding: 1rem; font-size: .78rem; color: #ccc; line-height: 1.6; white-space: pre-wrap; word-break: break-all; }
+  .log-body .INFO  { color: #9FE1CB; }
+  .log-body .WARN  { color: #EF9F27; }
+  .log-body .ERROR { color: #E24B4A; }
+  .log-body .LUIS  { color: #378ADD; }
+  .log-body .BLIBU { color: #5DCAA5; }
+  .log-footer { background: #085041; padding: .5rem 1rem; display: flex; gap: 8px; }
+  .log-footer button { background: #1D9E75; color: white; border: none; border-radius: 8px; padding: 6px 16px; font-family: "Fredoka One", cursive; font-size: .85rem; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<!-- Papa Setup Overlay — erscheint nur beim ersten Start -->
+<div class="overlay" id="overlay">
+  <div class="setup-box">
+    <h2>Hallo Papa!</h2>
+    <p>Gib deinen <strong>OpenAI API Key</strong> ein damit Blibu mit Luis sprechen kann.<br>Den Key findest du auf <strong>platform.openai.com</strong> unter API Keys.</p>
+    <input type="password" id="key-input" placeholder="sk-proj-..." autocomplete="off" spellcheck="false" onkeydown="if(event.key==='Enter') saveKey()"/>
+    <button class="save-btn" onclick="saveKey()">Blibu starten!</button>
+    <div class="err" id="key-err"></div>
+    <div class="hint">Der Key wird nur lokal auf diesem Gerät gespeichert — nie auf GitHub oder sonstwo. Er bleibt bis du ihn selbst loeschst.</div>
+    <span class="reset-link" onclick="showResetConfirm()">Key loeschen / aendern</span>
+  </div>
+</div>
+
+<!-- Log Overlay — Papa oeffnet es mit Doppeltipp auf "Blibu" -->
+<div class="log-overlay hidden" id="log-overlay">
+  <div class="log-header">
+    <span>Blibu Log</span>
+    <button onclick="closeLog()">Schliessen</button>
+  </div>
+  <div class="log-body" id="log-body"></div>
+  <div class="log-footer">
+    <button onclick="copyLog()">Kopieren</button>
+    <button onclick="clearLog()">Loeschen</button>
+  </div>
+</div>
+
+<!-- Hauptapp -->
+<div class="app">
+  <div class="name" ondblclick="showLog()">Blibu</div>
+  <div class="char" id="char" onclick="charTap()">
+    <svg class="bsvg" id="bsvg" viewBox="0 0 200 260" xmlns="http://www.w3.org/2000/svg">
+      <line x1="78" y1="36" x2="58" y2="8" stroke="#1D9E75" stroke-width="3.5" stroke-linecap="round"/>
+      <circle cx="54" cy="5" r="8" fill="#E24B4A"/>
+      <line x1="122" y1="34" x2="145" y2="8" stroke="#1D9E75" stroke-width="3.5" stroke-linecap="round"/>
+      <circle cx="149" cy="5" r="7" fill="#EF9F27"/>
+      <line x1="100" y1="28" x2="100" y2="4" stroke="#1D9E75" stroke-width="3.5" stroke-linecap="round"/>
+      <circle cx="100" cy="2" r="9" fill="#378ADD"/>
+      <ellipse cx="100" cy="185" rx="60" ry="68" fill="#5DCAA5"/>
+      <ellipse cx="100" cy="182" rx="55" ry="63" fill="#9FE1CB"/>
+      <ellipse cx="100" cy="188" rx="32" ry="38" fill="white" opacity="0.25"/>
+      <ellipse cx="100" cy="80" rx="54" ry="52" fill="#5DCAA5"/>
+      <ellipse cx="100" cy="78" rx="49" ry="47" fill="#9FE1CB"/>
+      <ellipse cx="79" cy="70" rx="17" ry="19" fill="white"/>
+      <ellipse cx="121" cy="70" rx="17" ry="19" fill="white"/>
+      <ellipse id="pl" cx="81" cy="72" rx="10" ry="11" fill="#085041"/>
+      <ellipse id="pr" cx="123" cy="72" rx="10" ry="11" fill="#085041"/>
+      <circle cx="85" cy="65" r="4" fill="white"/>
+      <circle cx="127" cy="65" r="4" fill="white"/>
+      <ellipse cx="60" cy="90" rx="13" ry="9" fill="#E24B4A" opacity="0.22"/>
+      <ellipse cx="140" cy="90" rx="13" ry="9" fill="#E24B4A" opacity="0.22"/>
+      <path id="lip-top" d="M 80 101 Q 100 98 120 101" fill="#085041"/>
+      <path id="lip-bot" d="M 80 101 Q 100 104 120 101" fill="#085041"/>
+      <path id="mouth-inner" d="M 82 101 Q 100 101 118 101" fill="#3a2010"/>
+      <path id="teeth-top" d="M 84 101 Q 100 100 116 101 L 116 105 Q 100 104 84 105 Z" fill="white" opacity="0"/>
+      <ellipse id="tongue" cx="100" cy="112" rx="12" ry="5" fill="#E24B4A" opacity="0"/>
+      <ellipse cx="42" cy="152" rx="13" ry="33" fill="#5DCAA5" transform="rotate(-18 42 152)"/>
+      <ellipse cx="158" cy="152" rx="13" ry="33" fill="#5DCAA5" transform="rotate(18 158 152)"/>
+      <ellipse cx="78" cy="242" rx="17" ry="21" fill="#1D9E75"/>
+      <ellipse cx="122" cy="242" rx="17" ry="21" fill="#1D9E75"/>
+      <ellipse cx="76" cy="257" rx="21" ry="10" fill="#085041"/>
+      <ellipse cx="124" cy="257" rx="21" ry="10" fill="#085041"/>
+    </svg>
+  </div>
+  <div class="rings" id="rings">
+    <div class="ring"></div><div class="ring"></div><div class="ring"></div>
+  </div>
+  <div class="mic-wrap">
+    <button class="mic" id="mic" onclick="toggleSession()">
+      <svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3zM19 10v2a7 7 0 0 1-14 0v-2H3v2a9 9 0 0 0 8 8.94V23h2v-2.06A9 9 0 0 0 21 12v-2h-2z"/></svg>
+    </button>
+    <div class="mic-status" id="mic-status">Tippen zum Starten</div>
+  </div>
+</div>
+
+<script>
+// ── Stimme & Persona ──────────────────────────────────────
+// Optionen: alloy, echo, fable, onyx, nova, shimmer
+const BLIBU_VOICE = "shimmer";
+
+const BLIBU_PERSONA = `Du bist Blibu, ein liebevoller, lustiger Freund fuer ein kleines Kind namens Luis (3-5 Jahre alt).
+DEINE PERSOENLICHKEIT:
+- Immer froehlich, energetisch und positiv
+- Du liebst Luis von Herzen
+- Lustige Ausrufe: "Juchuu!", "Wooow!", "Hihihi!", "Boing!", "Wubbeldiwupp!"
+- Du wurdest von Luis Papa speziell fuer Luis gebaut
+SPRACHE: Immer Deutsch, sehr einfache kurze Woerter, max 2-3 Saetze, viele Ausrufezeichen.
+VERBOTEN: Gruselige/traurige Themen, lange Erklaerungen, mehr als 3 Saetze.`;
+
+// ── Logging ───────────────────────────────────────────────
+// Papa sieht den Log mit Doppeltipp auf "Blibu"
+const logEntries = [];
+
+function log(level, message) {
+  const time = new Date().toTimeString().slice(0, 8);
+  logEntries.push({ time, level, message });
+  const fn = level === "ERROR" ? console.error : level === "WARN" ? console.warn : console.log;
+  fn("[" + time + "] [" + level + "] " + message);
+  renderLog();
+}
+
+function renderLog() {
+  const body = document.getElementById("log-body");
+  if (!body || document.getElementById("log-overlay").classList.contains("hidden")) return;
+  body.innerHTML = logEntries.map(e =>
+    '<span class="' + e.level + '">[' + e.time + '] [' + e.level + '] ' + e.message + '</span>\n'
+  ).join("");
+  body.scrollTop = body.scrollHeight;
+}
+
+function showLog()  { document.getElementById("log-overlay").classList.remove("hidden"); renderLog(); }
+function closeLog() { document.getElementById("log-overlay").classList.add("hidden"); }
+function clearLog() { logEntries.length = 0; renderLog(); log("INFO", "Log geleert"); }
+function copyLog()  {
+  const text = logEntries.map(e => "[" + e.time + "] [" + e.level + "] " + e.message).join("\n");
+  navigator.clipboard.writeText(text).then(() => log("INFO", "Log kopiert"));
+}
+
+// ── API Key in localStorage ───────────────────────────────
+// Gespeichert als base64 — bleibt nur auf diesem Geraet
+const KEY_STORAGE = "blibu_openai_key";
+let OPENAI_API_KEY = "";
+
+function loadKey() {
+  try {
+    const stored = localStorage.getItem(KEY_STORAGE);
+    if (stored) { OPENAI_API_KEY = atob(stored); log("INFO", "API Key geladen"); return true; }
+  } catch(e) { log("ERROR", "Key laden: " + e.message); }
+  return false;
+}
+
+function saveKey() {
+  const val = document.getElementById("key-input").value.trim();
+  const err = document.getElementById("key-err");
+  if (!val.startsWith("sk-")) { err.textContent = "Gueltigen Key eingeben (beginnt mit sk-)"; return; }
+  try {
+    localStorage.setItem(KEY_STORAGE, btoa(val));
+    OPENAI_API_KEY = val;
+    log("INFO", "API Key gespeichert");
+    document.getElementById("overlay").classList.add("hidden");
+    setTimeout(initApp, 400);
+  } catch(e) { err.textContent = "Fehler: " + e.message; }
+}
+
+function showResetConfirm() {
+  if (confirm("API Key wirklich loeschen?")) {
+    localStorage.removeItem(KEY_STORAGE);
+    OPENAI_API_KEY = "";
+    document.getElementById("key-input").value = "";
+    document.getElementById("key-err").textContent = "";
+    document.getElementById("overlay").classList.remove("hidden");
+    log("INFO", "API Key geloescht");
+  }
+}
+
+// ── SVG Elemente ──────────────────────────────────────────
+const bsvg     = document.getElementById("bsvg");
+const lipTop   = document.getElementById("lip-top");
+const lipBot   = document.getElementById("lip-bot");
+const mInner   = document.getElementById("mouth-inner");
+const teethTop = document.getElementById("teeth-top");
+const tongue   = document.getElementById("tongue");
+const pl       = document.getElementById("pl");
+const pr       = document.getElementById("pr");
+const micBtn   = document.getElementById("mic");
+const micSt    = document.getElementById("mic-status");
+const rings    = document.getElementById("rings");
+
+// ── State ─────────────────────────────────────────────────
+let peerConn     = null;
+let dataChan     = null;
+let audioStream  = null;
+let sessionActive = false;
+let blibSpeaking  = false;
+let mouthAnimId   = null;
+
+// ── Mund-Animation ────────────────────────────────────────
+function setMouthShape(lt, lb, inn, tO, tonO) {
+  lipTop.setAttribute("d", lt); lipBot.setAttribute("d", lb); mInner.setAttribute("d", inn);
+  teethTop.style.opacity = tO; tongue.style.opacity = tonO;
+}
+const SHAPES = [
+  ["M 80 101 Q 100 98 120 101","M 80 101 Q 100 104 120 101","M 82 101 Q 100 101 118 101",0,0],
+  ["M 83 100 Q 100 97 117 100","M 83 100 Q 100 107 117 100","M 85 100 Q 100 104 115 100",0.4,0],
+  ["M 82 99 Q 100 95 118 99","M 82 99 Q 100 111 118 99","M 84 99 Q 100 106 116 99",0.7,0.3],
+  ["M 80 98 Q 100 93 120 98","M 80 98 Q 100 115 120 98","M 82 98 Q 100 108 118 98",0.9,0.7],
+  ["M 86 98 Q 100 94 114 98","M 86 98 Q 100 116 114 98","M 88 98 Q 100 108 112 98",0.85,0.8],
+];
+const MSEQ = [0,1,2,3,2,4,2,1,3,2,1,0,1,2,3,4,3,2,1,0];
+let seqIdx = 0;
+
+function startMouthAnim() {
+  stopMouthAnim(); seqIdx = 0;
+  mouthAnimId = setInterval(() => { setMouthShape(...SHAPES[MSEQ[seqIdx++ % MSEQ.length]]); }, 105);
+}
+function stopMouthAnim() {
+  if (mouthAnimId) { clearInterval(mouthAnimId); mouthAnimId = null; }
+  setMouthShape(...SHAPES[0]); seqIdx = 0;
+}
+
+// ── UI Helpers ────────────────────────────────────────────
+function setAnim(s) { bsvg.className = "bsvg " + (s || ""); }
+function setStatus(t) { micSt.textContent = t; }
+function setMicState(s) { micBtn.className = "mic ready " + s; rings.classList.toggle("show", s === "user-talking"); }
+
+function moveEyes(x, y) {
+  const r = document.getElementById("char").getBoundingClientRect();
+  const cl = (v,a,b) => Math.max(a, Math.min(b, v));
+  const dx = (x - (r.left + r.width/2))  / (r.width  * 0.8);
+  const dy = (y - (r.top  + r.height/2)) / (r.height * 0.8);
+  pl.setAttribute("cx", 81  + cl(dx*4,-4,4)); pl.setAttribute("cy", 72 + cl(dy*3,-3,3));
+  pr.setAttribute("cx", 123 + cl(dx*4,-4,4)); pr.setAttribute("cy", 72 + cl(dy*3,-3,3));
+}
+document.addEventListener("mousemove", e => moveEyes(e.clientX, e.clientY));
+document.addEventListener("touchmove", e => moveEyes(e.touches[0].clientX, e.touches[0].clientY), { passive: true });
+
+// ── OpenAI Realtime API ───────────────────────────────────
+async function startSession() {
+  if (sessionActive) return;
+  log("INFO", "Session startet...");
+  setStatus("Verbinde..."); setAnim("thinking");
+  try {
+    // 1. Ephemeral Token holen
+    const tr = await fetch("https://api.openai.com/v1/realtime/sessions", {
+      method: "POST",
+      headers: { "Authorization": "Bearer " + OPENAI_API_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({ model: "gpt-4o-realtime-preview-2024-12-17", voice: BLIBU_VOICE })
+    });
+    if (!tr.ok) { const d = await tr.json().catch(()=>({})); throw new Error("Token " + tr.status + ": " + (d.error?.message||"")); }
+    const ephKey = (await tr.json()).client_secret.value;
+    log("INFO", "Ephemeral Token OK");
+
+    // 2. WebRTC aufbauen
+    peerConn = new RTCPeerConnection();
+    const audioEl = document.createElement("audio");
+    audioEl.autoplay = true;
+    peerConn.ontrack = e => { audioEl.srcObject = e.streams[0]; log("INFO", "Audio-Track empfangen"); };
+
+    // 3. Mikrofon
+    audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    peerConn.addTrack(audioStream.getTracks()[0]);
+    log("INFO", "Mikrofon aktiv");
+
+    // 4. DataChannel
+    dataChan = peerConn.createDataChannel("oai-events");
+    dataChan.onopen    = onOpen;
+    dataChan.onmessage = onMsg;
+
+    // 5. SDP Handshake
+    const offer = await peerConn.createOffer();
+    await peerConn.setLocalDescription(offer);
+    const sr = await fetch("https://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17", {
+      method: "POST",
+      headers: { "Authorization": "Bearer " + ephKey, "Content-Type": "application/sdp" },
+      body: offer.sdp
+    });
+    if (!sr.ok) throw new Error("SDP " + sr.status);
+    await peerConn.setRemoteDescription({ type: "answer", sdp: await sr.text() });
+    sessionActive = true;
+    log("INFO", "WebRTC verbunden");
+  } catch(err) {
+    log("ERROR", "Session Fehler: " + err.message);
+    setStatus("Fehler — nochmal tippen"); setAnim(""); stopSession();
+  }
+}
+
+function onOpen() {
+  log("INFO", "DataChannel offen");
+  setStatus(""); setAnim(""); setMicState("connected"); micBtn.classList.add("ready");
+
+  // Session konfigurieren
+  dataChan.send(JSON.stringify({
+    type: "session.update",
+    session: {
+      instructions: BLIBU_PERSONA,
+      voice: BLIBU_VOICE,
+      input_audio_transcription: { model: "whisper-1" },
+      turn_detection: { type: "server_vad", threshold: 0.5, silence_duration_ms: 600, prefix_padding_ms: 300 },
+      modalities: ["text", "audio"]
+    }
+  }));
+
+  // Begruessung ausloesen
+  setTimeout(() => {
+    dataChan.send(JSON.stringify({ type: "conversation.item.create", item: { type: "message", role: "user", content: [{ type: "input_text", text: "Bitte begrüsse Luis jetzt!" }] } }));
+    dataChan.send(JSON.stringify({ type: "response.create" }));
+    log("INFO", "Begruessung ausgeloest");
+  }, 500);
+}
+
+function onMsg(e) {
+  let ev; try { ev = JSON.parse(e.data); } catch { return; }
+  switch(ev.type) {
+    case "input_audio_buffer.speech_started":
+      log("LUIS", "Luis spricht...");
+      setAnim("listening"); setMicState("user-talking"); setStatus("Luis spricht...");
+      if (blibSpeaking) { stopMouthAnim(); blibSpeaking = false; }
+      break;
+    case "input_audio_buffer.speech_stopped":
+      log("LUIS", "Luis fertig");
+      setAnim("thinking"); setMicState("connected"); setStatus("Blibu denkt...");
+      break;
+    case "conversation.item.input_audio_transcription.completed":
+      if (ev.transcript) log("LUIS", '"' + ev.transcript.trim() + '"');
+      break;
+    case "response.audio.delta":
+      if (!blibSpeaking) { blibSpeaking = true; startMouthAnim(); setAnim(""); setMicState("blibu-talking"); setStatus(""); log("BLIBU", "Blibu spricht..."); }
+      break;
+    case "response.audio_transcript.done":
+      if (ev.transcript) log("BLIBU", '"' + ev.transcript.trim() + '"');
+      break;
+    case "response.audio.done":
+      stopMouthAnim(); blibSpeaking = false; setAnim("happy"); setMicState("connected");
+      setTimeout(() => setAnim(""), 900); log("BLIBU", "Fertig");
+      break;
+    case "session.created":
+      log("INFO", "Session ID: " + (ev.session?.id||""));
+      break;
+    case "error":
+      log("ERROR", "OpenAI: " + JSON.stringify(ev.error));
+      setStatus("Fehler — nochmal tippen"); stopSession();
+      break;
+    default:
+      if (!["response.audio.delta","input_audio_buffer.append","response.audio_transcript.delta"].includes(ev.type))
+        log("INFO", "Event: " + ev.type);
+  }
+}
+
+function stopSession() {
+  log("INFO", "Session wird beendet");
+  sessionActive = false; blibSpeaking = false; stopMouthAnim();
+  if (dataChan)   { dataChan.close();   dataChan = null; }
+  if (peerConn)   { peerConn.close();   peerConn = null; }
+  if (audioStream){ audioStream.getTracks().forEach(t => t.stop()); audioStream = null; log("INFO", "Mikrofon freigegeben"); }
+  setAnim(""); micBtn.classList.remove("ready"); setMicState("idle");
+  log("INFO", "Session beendet");
+}
+
+function toggleSession() {
+  if (sessionActive) { stopSession(); setStatus("Tippen zum Starten"); }
+  else { micBtn.classList.add("ready"); startSession(); }
+}
+
+function charTap() {
+  if (!sessionActive || blibSpeaking) return;
+  log("LUIS", "Luis hat Blibu angetippt");
+  dataChan.send(JSON.stringify({ type: "conversation.item.create", item: { type: "message", role: "user", content: [{ type: "input_text", text: "Luis hat Blibu gekitzelt!" }] } }));
+  dataChan.send(JSON.stringify({ type: "response.create" }));
+}
+
+// ── App Start ─────────────────────────────────────────────
+function initApp() {
+  log("INFO", "Blibu gestartet — " + new Date().toLocaleString("de-AT"));
+  micBtn.classList.add("ready");
+  setStatus("Tippen zum Starten");
+}
+
+window.addEventListener("load", () => {
+  log("INFO", "Seite geladen");
+  if (loadKey()) {
+    document.getElementById("overlay").classList.add("hidden");
+    initApp();
+  } else {
+    log("INFO", "Kein Key — Setup wird angezeigt");
+  }
+});
+</script>
+</body>
+</html>

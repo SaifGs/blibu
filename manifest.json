@@ -1,0 +1,25 @@
+{
+  "name": "Blibu",
+  "short_name": "Blibu",
+  "description": "Blibus lustiger KI-Freund für Luis",
+  "start_url": "./blibu.html",
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "background_color": "#d4f3e8",
+  "theme_color": "#1D9E75",
+  "lang": "de",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
