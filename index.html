@@ -43,16 +43,17 @@
   .mic-status { font-size: clamp(.7rem, 2vw, .9rem); color: #085041; opacity: .6; min-height: 1.2em; text-align: center; }
 
   /* Papa Setup Overlay */
-  .overlay { position: fixed; inset: 0; z-index: 100; background: rgba(8,80,65,.94); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+  .overlay { position: fixed; inset: 0; z-index: 100; background: rgba(8,80,65,.94); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); overflow-y: auto; padding: 1rem; }
   .overlay.hidden { display: none; }
-  .setup-box { background: white; border-radius: 24px; padding: 2rem 1.8rem; max-width: 400px; width: 92%; text-align: center; }
+  .setup-box { background: white; border-radius: 24px; padding: 2rem 1.8rem; max-width: 420px; width: 100%; text-align: center; }
   .setup-box h2 { font-size: 2rem; color: #085041; margin-bottom: .4rem; }
-  .setup-box p { font-family: sans-serif; color: #555; font-size: .92rem; line-height: 1.55; margin-bottom: 1.2rem; }
-  .setup-box input { width: 100%; border: 2px solid #9FE1CB; border-radius: 12px; padding: 12px 14px; font-size: .95rem; font-family: sans-serif; color: #085041; margin-bottom: .75rem; outline: none; }
+  .setup-box p { font-family: sans-serif; color: #555; font-size: .92rem; line-height: 1.55; margin-bottom: .75rem; }
+  .setup-box .label { font-family: sans-serif; font-size: .8rem; color: #085041; font-weight: bold; text-align: left; display: block; margin-bottom: .3rem; margin-top: .9rem; }
+  .setup-box input { width: 100%; border: 2px solid #9FE1CB; border-radius: 12px; padding: 12px 14px; font-size: .9rem; font-family: sans-serif; color: #085041; outline: none; }
   .setup-box input:focus { border-color: #1D9E75; }
-  .setup-box .save-btn { background: #1D9E75; color: white; border: none; border-radius: 50px; padding: 12px 32px; font-family: "Fredoka One", cursive; font-size: 1.2rem; cursor: pointer; width: 100%; }
+  .setup-box .save-btn { background: #1D9E75; color: white; border: none; border-radius: 50px; padding: 12px 32px; font-family: "Fredoka One", cursive; font-size: 1.2rem; cursor: pointer; width: 100%; margin-top: 1.1rem; }
   .setup-box .err { font-family: sans-serif; font-size: .82rem; color: #E24B4A; min-height: 1.1em; margin-top: .4rem; }
-  .setup-box .hint { font-family: sans-serif; font-size: .75rem; color: #aaa; margin-top: .75rem; line-height: 1.4; }
+  .setup-box .hint { font-family: sans-serif; font-size: .75rem; color: #aaa; margin-top: .75rem; line-height: 1.55; }
   .setup-box .reset-link { font-family: sans-serif; font-size: .75rem; color: #1D9E75; cursor: pointer; margin-top: .5rem; display: inline-block; text-decoration: underline; }
 
   /* Log Overlay */
@@ -83,19 +84,29 @@
 </head>
 <body>
 
-<!-- Papa Setup Overlay — nur beim ersten Start -->
+<!-- Papa Setup Overlay -->
 <div class="overlay" id="overlay">
   <div class="setup-box">
-    <h2>Hallo Papa!</h2>
-    <p>Gib deinen <strong>OpenAI API Key</strong> ein damit Blibu mit Luis sprechen kann.<br>
-       Den Key findest du auf <strong>platform.openai.com</strong> unter API Keys.</p>
-    <input type="password" id="key-input" placeholder="sk-proj-..."
+    <h2>Hallo Papa! 👋</h2>
+    <p>Gib deine API Keys ein damit Blibu mit Luis sprechen kann.</p>
+
+    <span class="label">🤖 OpenAI API Key (Whisper + GPT)</span>
+    <input type="password" id="openai-key-input" placeholder="sk-..."
+      autocomplete="off" spellcheck="false"/>
+
+    <span class="label">🔊 ElevenLabs API Key (Kinderstimme)</span>
+    <input type="password" id="eleven-key-input" placeholder="..."
       autocomplete="off" spellcheck="false"
       onkeydown="if(event.key==='Enter') saveKey()"/>
-    <button class="save-btn" onclick="saveKey()">Blibu starten!</button>
+
+    <button class="save-btn" onclick="saveKey()">Blibu starten! 🚀</button>
     <div class="err" id="key-err"></div>
-    <div class="hint">Der Key wird nur lokal auf diesem Gerät gespeichert — nie auf GitHub.</div>
-    <span class="reset-link" onclick="showResetConfirm()">Key loeschen / aendern</span>
+    <div class="hint">
+      OpenAI Key: <strong>platform.openai.com</strong> → API keys<br>
+      ElevenLabs Key: <strong>elevenlabs.io</strong> → Profile → API Key<br>
+      Beide Keys werden nur lokal auf diesem Gerät gespeichert.
+    </div>
+    <span class="reset-link" onclick="showResetConfirm()">Keys loeschen / aendern</span>
   </div>
 </div>
 
@@ -173,8 +184,6 @@
   </div>
 </div>
 
-<!-- ES Module — type="module" aktiviert den Import/Export Mechanismus -->
 <script type="module" src="main.js"></script>
-
 </body>
 </html>

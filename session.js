@@ -1,197 +1,379 @@
-// session.js — OpenAI Realtime API using Agents SDK
-// Cleaned & modernized version — March 2026
+// ══════════════════════════════════════════════════════════
+// session.js — Gesprächs-Engine
+//
+// Ablauf:
+//   1. MediaRecorder nimmt Luis' Stimme auf
+//   2. Silence-Detektion erkennt wann Luis fertig ist
+//   3. Whisper (OpenAI) transkribiert das Audio
+//   4. GPT-4o-mini generiert Blibu's Antwort
+//   5. ElevenLabs spricht die Antwort mit Kinderstimme
+// ══════════════════════════════════════════════════════════
 
-import { REALTIME_MODEL, VAD_CONFIG, PERSONA, VOICE } from "./config.js";
+import {
+  OPENAI_STT_MODEL,
+  OPENAI_LLM_MODEL,
+  ELEVENLABS_VOICE_ID,
+  ELEVENLABS_MODEL,
+  ELEVENLABS_SETTINGS,
+  SILENCE_TIMEOUT_MS,
+  SILENCE_THRESHOLD,
+  MIN_RECORD_MS,
+  PERSONA,
+} from "./config.js";
 import { log } from "./log.js";
 import { startMouthAnim, stopMouthAnim } from "./mouth.js";
 import { setAnim, setMicState, setStatus } from "./ui.js";
 
-// ── SDK imports ──────────────────────────────────────────────
-import {
-  RealtimeAgent,
-  RealtimeSession,
-  OpenAIRealtimeWebRTC,
-} from "@openai/agents/realtime";
-
-let session = null;
-let transport = null;
-let agent = null;
-
+// ── State ─────────────────────────────────────────────────
 export let sessionActive = false;
-export let blibSpeaking = false;
+export let blibSpeaking  = false;
 
-// ── Start session ────────────────────────────────────────────
-export async function startSession(apiKey) {
+let openaiKey  = "";
+let elevenKey  = "";
+
+let mediaStream     = null;
+let audioContext    = null;
+let analyser        = null;
+let recorder        = null;
+let audioChunks     = [];
+let recordingStart  = 0;
+let silenceTimer    = null;
+let isRecording     = false;
+let currentAudio    = null;
+let conversationHistory = [];
+
+// ── Session starten ───────────────────────────────────────
+export async function startSession(keys) {
   if (sessionActive) return;
-  log("INFO", "Session startet (Agents SDK)...");
+
+  openaiKey = keys.openai;
+  elevenKey = keys.eleven;
+
+  log("INFO", "Session startet (Whisper + GPT-4o-mini + ElevenLabs)...");
   setStatus("Verbinde...");
   setAnim("thinking");
 
   try {
-    // 1. Get ephemeral token (same as before)
-    const tokenRes = await fetch("https://api.openai.com/v1/realtime/sessions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: REALTIME_MODEL,
-        voice: VOICE,
-      }),
-    });
-
-    if (!tokenRes.ok) {
-      const err = await tokenRes.json().catch(() => ({}));
-      throw new Error(`Ephemeral token failed: ${tokenRes.status} — ${err.error?.message || ""}`);
-    }
-
-    const { client_secret } = await tokenRes.json();
-    const ephemeralKey = client_secret.value;
-    log("INFO", "Ephemeral Token OK");
-
-    // 2. Get microphone stream
-    const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
     log("INFO", "Mikrofon aktiv");
-
-    // 3. Create WebRTC transport
-    transport = new OpenAIRealtimeWebRTC({
-      mediaStream: audioStream,
-      // Optional: you can pass an existing <audio> element if you want more control
-      // audioElement: document.querySelector('audio') or create one
-    });
-
-    // 4. Create agent with your persona
-    agent = new RealtimeAgent({
-      name: "Blibu",
-      instructions: PERSONA,
-      model: REALTIME_MODEL,
-      voice: VOICE,
-      turn_detection: VAD_CONFIG,
-      modalities: ["text", "audio"],
-      input_audio_transcription: { model: "whisper-1" },
-    });
-
-    // 5. Create and connect session
-    session = new RealtimeSession({
-      agent,
-      transport,
-    });
-
-    await session.connect({ apiKey: ephemeralKey });
-    log("INFO", "RealtimeSession verbunden");
-
-    sessionActive = true;
-    setMicState("connected");
-    setStatus("");
+  } catch (e) {
+    log("ERROR", "Mikrofon verweigert: " + e.message);
+    setStatus("Mikrofon erlauben!");
     setAnim("");
+    return;
+  }
 
-    // 6. Auto-greeting (cleaner than before)
-    await session.send({
-      type: "conversation.item.create",
-      item: {
-        type: "message",
-        role: "user",
-        content: [{ type: "input_text", text: "Hallo Blibu! Bitte begrüße Luis jetzt!" }],
-      },
-    });
-    await session.createResponse();
-    log("INFO", "Begrüßung ausgelöst");
+  // AudioContext für Silence-Detektion
+  audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  const source = audioContext.createMediaStreamSource(mediaStream);
+  analyser = audioContext.createAnalyser();
+  analyser.fftSize = 512;
+  source.connect(analyser);
 
-    // ── Event listeners ──────────────────────────────────────
-    setupEventListeners();
+  sessionActive = true;
+  conversationHistory = [];
+
+  setMicState("connected");
+  setStatus("Luis kann sprechen!");
+  setAnim("");
+
+  // Begrüßung
+  await blibRespond("__greeting__");
+
+  // Danach auf Luis warten
+  waitForSpeech();
+}
+
+// ── Auf Sprache warten (Silence → Speech Detektion) ───────
+function waitForSpeech() {
+  if (!sessionActive || blibSpeaking) return;
+
+  const buffer = new Float32Array(analyser.fftSize);
+  let speechDetected = false;
+
+  setStatus("Luis kann sprechen!");
+  setMicState("connected");
+  setAnim("");
+
+  function checkLevel() {
+    if (!sessionActive || blibSpeaking) return;
+
+    analyser.getFloatTimeDomainData(buffer);
+    const rms = Math.sqrt(buffer.reduce((s, v) => s + v * v, 0) / buffer.length);
+
+    if (rms > SILENCE_THRESHOLD && !speechDetected && !isRecording) {
+      // Luis fängt an zu sprechen
+      speechDetected = true;
+      startRecording();
+    } else if (!speechDetected) {
+      requestAnimationFrame(checkLevel);
+    }
+  }
+
+  requestAnimationFrame(checkLevel);
+}
+
+// ── Aufnahme starten ──────────────────────────────────────
+function startRecording() {
+  if (!sessionActive || isRecording) return;
+
+  isRecording    = true;
+  audioChunks    = [];
+  recordingStart = Date.now();
+
+  log("LUIS", "Luis spricht...");
+  setAnim("listening");
+  setMicState("user-talking");
+  setStatus("Luis spricht...");
+
+  // MediaRecorder mit bestem verfügbaren Format
+  const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+    ? "audio/webm;codecs=opus"
+    : "audio/webm";
+
+  recorder = new MediaRecorder(mediaStream, { mimeType });
+  recorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunks.push(e.data); };
+  recorder.onstop = onRecordingStop;
+  recorder.start(100); // alle 100ms ein Chunk
+
+  // Silence-Detektion während der Aufnahme
+  monitorSilence();
+}
+
+// ── Stille während Aufnahme überwachen ────────────────────
+function monitorSilence() {
+  const buffer = new Float32Array(analyser.fftSize);
+
+  function check() {
+    if (!isRecording) return;
+
+    analyser.getFloatTimeDomainData(buffer);
+    const rms = Math.sqrt(buffer.reduce((s, v) => s + v * v, 0) / buffer.length);
+
+    if (rms < SILENCE_THRESHOLD) {
+      // Stille erkannt — Timer starten
+      if (!silenceTimer) {
+        silenceTimer = setTimeout(() => {
+          if (isRecording) stopRecording();
+        }, SILENCE_TIMEOUT_MS);
+      }
+    } else {
+      // Luis spricht noch — Timer zurücksetzen
+      if (silenceTimer) {
+        clearTimeout(silenceTimer);
+        silenceTimer = null;
+      }
+    }
+    requestAnimationFrame(check);
+  }
+
+  requestAnimationFrame(check);
+}
+
+function stopRecording() {
+  if (!isRecording || !recorder) return;
+  isRecording = false;
+  if (silenceTimer) { clearTimeout(silenceTimer); silenceTimer = null; }
+
+  // Mindestdauer prüfen
+  const duration = Date.now() - recordingStart;
+  if (duration < MIN_RECORD_MS) {
+    // Zu kurz — ignorieren und neu warten
+    recorder.stop();
+    log("INFO", "Zu kurze Aufnahme ignoriert");
+    setTimeout(() => waitForSpeech(), 200);
+    return;
+  }
+
+  recorder.stop();
+}
+
+// ── Aufnahme verarbeiten ──────────────────────────────────
+async function onRecordingStop() {
+  if (!sessionActive) return;
+
+  const blob = new Blob(audioChunks, { type: "audio/webm" });
+  audioChunks = [];
+
+  setAnim("thinking");
+  setMicState("connected");
+  setStatus("Blibu denkt...");
+
+  try {
+    // 1. Whisper STT
+    const transcript = await transcribeWithWhisper(blob);
+    if (!transcript || transcript.trim().length < 2) {
+      log("INFO", "Kein Text erkannt — neu warten");
+      waitForSpeech();
+      return;
+    }
+    log("LUIS", `"${transcript}"`);
+
+    // 2. GPT-4o-mini + ElevenLabs
+    await blibRespond(transcript);
 
   } catch (err) {
-    log("ERROR", "Session Fehler: " + err.message);
-    setStatus("Fehler — nochmal tippen");
-    setAnim("");
-    stopSession();
+    log("ERROR", "Verarbeitungsfehler: " + err.message);
+    setStatus("Fehler — bitte nochmal sprechen");
+    setTimeout(() => waitForSpeech(), 1500);
   }
 }
 
-// ── Event mapping to your UI ────────────────────────────────
-function setupEventListeners() {
-  if (!session) return;
+// ── Whisper STT ───────────────────────────────────────────
+async function transcribeWithWhisper(blob) {
+  log("INFO", "Whisper transkribiert...");
 
-  session.on("input_audio_buffer.speech_started", () => {
-    log("LUIS", "Luis spricht...");
-    setAnim("listening");
-    setMicState("user-talking");
-    setStatus("Luis spricht...");
-    if (blibSpeaking) {
-      stopMouthAnim();
-      blibSpeaking = false;
-    }
+  const formData = new FormData();
+  formData.append("file", blob, "audio.webm");
+  formData.append("model", OPENAI_STT_MODEL);
+  formData.append("language", "de");
+
+  const res = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${openaiKey}` },
+    body: formData,
   });
 
-  session.on("input_audio_buffer.speech_stopped", () => {
-    log("LUIS", "Luis fertig");
-    setAnim("thinking");
-    setMicState("connected");
-    setStatus("Blibu denkt...");
-  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(`Whisper Fehler: ${res.status} — ${err.error?.message || ""}`);
+  }
 
-  session.on("conversation.item.input_audio_transcription.completed", (ev) => {
-    if (ev.transcript?.trim()) {
-      log("LUIS", `"${ev.transcript.trim()}"`);
-    }
-  });
-
-  session.on("response.audio.delta", () => {
-    if (!blibSpeaking) {
-      blibSpeaking = true;
-      startMouthAnim();
-      setAnim("");
-      setMicState("blibu-talking");
-      setStatus("");
-      log("BLIBU", "Blibu spricht...");
-    }
-  });
-
-  session.on("response.audio_transcript.done", (ev) => {
-    if (ev.transcript?.trim()) {
-      log("BLIBU", `"${ev.transcript.trim()}"`);
-    }
-  });
-
-  session.on("response.audio.done", () => {
-    stopMouthAnim();
-    blibSpeaking = false;
-    setAnim("happy");
-    setMicState("connected");
-    setTimeout(() => setAnim(""), 900);
-    log("BLIBU", "Fertig");
-  });
-
-  session.on("error", (err) => {
-    log("ERROR", "SDK Fehler: " + (err.message || JSON.stringify(err)));
-    setStatus("Fehler — nochmal tippen");
-    stopSession();
-  });
-
-  // Optional: more events you might want
-  // session.on("session.created", (ev) => log("INFO", "Session ID: " + ev.session?.id));
+  const data = await res.json();
+  return data.text?.trim() || "";
 }
 
-// ── Stop session ─────────────────────────────────────────────
+// ── GPT-4o-mini ───────────────────────────────────────────
+async function askGPT(userMessage) {
+  // Sonderfall: Begrüßung
+  const message = userMessage === "__greeting__"
+    ? "Hallo Blibu! Begrüße Luis jetzt ganz herzlich!"
+    : userMessage;
+
+  conversationHistory.push({ role: "user", content: message });
+
+  // Maximal 10 Nachrichten im Verlauf behalten
+  if (conversationHistory.length > 10) {
+    conversationHistory = conversationHistory.slice(-10);
+  }
+
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization:  `Bearer ${openaiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model:       OPENAI_LLM_MODEL,
+      max_tokens:  120,
+      temperature: 0.9,
+      messages: [
+        { role: "system", content: PERSONA },
+        ...conversationHistory,
+      ],
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(`GPT Fehler: ${res.status} — ${err.error?.message || ""}`);
+  }
+
+  const data  = await res.json();
+  const reply = data.choices[0]?.message?.content?.trim() || "Wubbeldiwupp!";
+
+  conversationHistory.push({ role: "assistant", content: reply });
+  return reply;
+}
+
+// ── ElevenLabs TTS ────────────────────────────────────────
+async function speakWithElevenLabs(text) {
+  const res = await fetch(
+    `https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "xi-api-key":   elevenKey,
+      },
+      body: JSON.stringify({
+        text,
+        model_id:       ELEVENLABS_MODEL,
+        voice_settings: ELEVENLABS_SETTINGS,
+      }),
+    }
+  );
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(`ElevenLabs Fehler: ${res.status} — ${err.detail?.message || ""}`);
+  }
+
+  const blob = await res.blob();
+  return URL.createObjectURL(blob);
+}
+
+// ── Blibu antwortet ───────────────────────────────────────
+async function blibRespond(userMessage) {
+  if (!sessionActive) return;
+
+  blibSpeaking = true;
+
+  try {
+    const reply    = await askGPT(userMessage);
+    log("BLIBU", `"${reply}"`);
+
+    const audioUrl = await speakWithElevenLabs(reply);
+
+    setMicState("blibu-talking");
+    setStatus("");
+    startMouthAnim();
+    setAnim("");
+
+    await playAudio(audioUrl);
+
+  } catch (err) {
+    log("ERROR", "Antwort fehlgeschlagen: " + err.message);
+    setStatus("Fehler — bitte nochmal sprechen");
+  } finally {
+    blibSpeaking = false;
+    stopMouthAnim();
+    setAnim("happy");
+    setMicState("connected");
+    setTimeout(() => {
+      setAnim("");
+      if (sessionActive) waitForSpeech();
+    }, 900);
+  }
+}
+
+// ── Audio abspielen ───────────────────────────────────────
+function playAudio(url) {
+  return new Promise((resolve) => {
+    if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+    currentAudio = new Audio(url);
+    currentAudio.onended = () => { URL.revokeObjectURL(url); resolve(); };
+    currentAudio.onerror = () => { URL.revokeObjectURL(url); resolve(); };
+    currentAudio.play().catch(() => resolve());
+  });
+}
+
+// ── Session beenden ───────────────────────────────────────
 export function stopSession() {
   log("INFO", "Session wird beendet");
 
   sessionActive = false;
-  blibSpeaking = false;
+  blibSpeaking  = false;
+  isRecording   = false;
+
+  if (silenceTimer) { clearTimeout(silenceTimer); silenceTimer = null; }
+  if (recorder)     { try { recorder.stop(); } catch(e) {} recorder = null; }
+  if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+  if (audioContext) { audioContext.close(); audioContext = null; }
+  if (mediaStream)  { mediaStream.getTracks().forEach(t => t.stop()); mediaStream = null; }
+
   stopMouthAnim();
-
-  if (session) {
-    session.disconnect().catch((e) => log("WARN", "Disconnect fehlgeschlagen: " + e));
-    session = null;
-  }
-
-  if (transport) {
-    transport.close();
-    transport = null;
-  }
-
-  if (agent) agent = null;
+  conversationHistory = [];
 
   setAnim("");
   setMicState("idle");
@@ -200,22 +382,9 @@ export function stopSession() {
   log("INFO", "Session beendet");
 }
 
-// ── Char tap (poke Blibu) ────────────────────────────────────
+// ── Blibu kitzeln ─────────────────────────────────────────
 export function charTap() {
-  if (!sessionActive || !session || blibSpeaking) return;
-
+  if (!sessionActive || blibSpeaking) return;
   log("LUIS", "Luis hat Blibu angetippt");
-
-  session.send({
-    type: "conversation.item.create",
-    item: {
-      type: "message",
-      role: "user",
-      content: [{ type: "input_text", text: "Luis hat Blibu gekitzelt!" }],
-    },
-  }).then(() => {
-    session.createResponse();
-  }).catch((e) => {
-    log("WARN", "charTap fehlgeschlagen: " + e);
-  });
+  blibRespond("Luis hat Blibu gekitzelt!");
 }

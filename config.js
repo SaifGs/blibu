@@ -1,30 +1,33 @@
 // ══════════════════════════════════════════════════════════
 // config.js — Zentrale Konfiguration
-// HIER kannst du alles anpassen
 // ══════════════════════════════════════════════════════════
 
-// ── OpenAI Stimme ─────────────────────────────────────────
-// Optionen: alloy, echo, fable, onyx, nova, shimmer
-// nova = hell, energetisch — beste Wahl für Blibu
-export const VOICE = "shimmer";
+// ── OpenAI ────────────────────────────────────────────────
+export const OPENAI_STT_MODEL = "whisper-1";      // Spracherkennung (sehr gut für Kinder)
+export const OPENAI_LLM_MODEL = "gpt-4o-mini";   // Günstig & schnell & smart
 
-// ── OpenAI Modell ─────────────────────────────────────────
-//export const REALTIME_MODEL = "gpt-4o-realtime-preview-2024-12-17";
-export const REALTIME_MODEL = "gpt-realtime-mini-2025-12-15";  // oder "gpt-realtime-1.5" wenn verfügbar
-// Alternativen: "gpt-4o-realtime-preview-2025-06-03" oder was in https://platform.openai.com/docs/models steht
-
-// ── Spracherkennung ───────────────────────────────────────
-export const VAD_CONFIG = {
-  type:                "server_vad",
-  threshold:           0.5,          // Lautstärke-Schwellwert
-  silence_duration_ms: 600,          // 600ms Stille = Luis fertig
-  prefix_padding_ms:   300,          // 300ms vor dem Sprechen mitaufnehmen
+// ── ElevenLabs Stimme ──────────────────────────────────────
+// Auf https://elevenlabs.io/voice-library nach "child" suchen
+// Voice-ID aus der URL kopieren und hier eintragen
+export const ELEVENLABS_VOICE_ID = "pFZP5JQG7iQjIQuC4Bku"; // Lily — hell & kindlich
+export const ELEVENLABS_MODEL    = "eleven_multilingual_v2"; // Beste Qualität für Deutsch
+export const ELEVENLABS_SETTINGS = {
+  stability:         0.55,
+  similarity_boost:  0.75,
+  style:             0.3,
+  use_speaker_boost: true,
 };
 
+// ── Aufnahme-Einstellungen ─────────────────────────────────
+export const SILENCE_TIMEOUT_MS = 1800;   // ms Stille bis Aufnahme endet
+export const SILENCE_THRESHOLD  = 0.015;  // Lautstärke-Schwelle (0–1)
+export const MIN_RECORD_MS      = 400;    // Mindest-Aufnahmedauer
+
 // ── localStorage Keys ─────────────────────────────────────
-export const STORAGE_KEY     = "blibu_openai_key";
-export const STORAGE_LOG_KEY = "blibu_log";
-export const LOG_MAX_ENTRIES = 500;
+export const STORAGE_KEY_OPENAI     = "blibu_openai_key";
+export const STORAGE_KEY_ELEVENLABS = "blibu_elevenlabs_key";
+export const STORAGE_LOG_KEY        = "blibu_log";
+export const LOG_MAX_ENTRIES        = 500;
 
 // ── Blibu's Persönlichkeit ────────────────────────────────
 export const PERSONA = `Du bist Blibu, ein liebevoller, lustiger Freund fuer ein kleines Kind namens Luis (3-5 Jahre alt).

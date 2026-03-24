@@ -1,25 +1,18 @@
 {
   "name": "blibu",
-  "version": "1.0.0",
-  "description": "",
-  "main": "main.js",
+  "version": "2.0.0",
+  "description": "Blibu — KI-Freund für Luis. Whisper STT + GPT-4o-mini + ElevenLabs TTS.",
+  "type": "module",
   "scripts": {
+    "start": "npx serve .",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/SaifGs/blibu.git"
   },
-  "keywords": [],
+  "keywords": ["kids", "ai", "openai", "elevenlabs", "whisper"],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
-  "bugs": {
-    "url": "https://github.com/SaifGs/blibu/issues"
-  },
-  "homepage": "https://github.com/SaifGs/blibu#readme",
-  "dependencies": {
-    "@openai/agents": "^0.8.0",
-    "@openai/agents-realtime": "^0.8.0"
-  }
+  "dependencies": {}
 }
