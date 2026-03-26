@@ -74,6 +74,19 @@ export function setMicState(state) {
 
 export function setStatus(_text) {}
 
+// ── Fehlermeldung kurz anzeigen ───────────────────────────
+let errorTimer = null;
+export function showError(msg) {
+  if (errorTimer) clearTimeout(errorTimer);
+  talkPill.className   = "talk-pill error";
+  talkPill.textContent = msg;
+  errorTimer = setTimeout(() => {
+    talkPill.className   = "talk-pill";
+    talkPill.textContent = "";
+    errorTimer = null;
+  }, 4000);
+}
+
 // ── Augen folgen Finger/Maus ──────────────────────────────
 function moveEyes(clientX, clientY) {
   const r  = document.getElementById("char").getBoundingClientRect();

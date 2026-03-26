@@ -22,7 +22,7 @@ import {
 } from "./config.js";
 import { log } from "./log.js";
 import { startMouthAnim, stopMouthAnim } from "./mouth.js";
-import { setAnim, setMicState, setStatus } from "./ui.js";
+import { setAnim, setMicState, setStatus, showError } from "./ui.js";
 
 // ── State ─────────────────────────────────────────────────
 export let sessionActive = false;
@@ -213,8 +213,12 @@ async function onRecordingStop() {
     await blibRespond(transcript);
 
   } catch (err) {
-    log("ERROR", "Verarbeitungsfehler: " + err.message);
-    setStatus("Fehler — bitte nochmal sprechen");
+    if (!navigator.onLine || err instanceof TypeError) {
+      log("ERROR", "Keine Internetverbindung");
+      showError("Keine Internetverbindung");
+    } else {
+      log("ERROR", "Verarbeitungsfehler: " + err.message);
+    }
     setTimeout(() => waitForSpeech(), 1500);
   }
 }
@@ -333,8 +337,12 @@ async function blibRespond(userMessage) {
     await playAudio(audioUrl);
 
   } catch (err) {
-    log("ERROR", "Antwort fehlgeschlagen: " + err.message);
-    setStatus("Fehler — bitte nochmal sprechen");
+    if (!navigator.onLine || err instanceof TypeError) {
+      log("ERROR", "Keine Internetverbindung");
+      showError("Keine Internetverbindung");
+    } else {
+      log("ERROR", "Antwort fehlgeschlagen: " + err.message);
+    }
   } finally {
     blibSpeaking = false;
     stopMouthAnim();
