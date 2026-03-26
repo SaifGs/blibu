@@ -5,7 +5,7 @@
 import { STORAGE_KEY_OPENAI, STORAGE_KEY_ELEVENLABS }           from "./config.js";
 import { log, showLog, closeLog, setFilter, clearLog, copyLog }  from "./log.js";
 import { startSession, stopSession, charTap, sessionActive }     from "./session.js";
-import { setStatus, setAnim }                                    from "./ui.js";
+import { setAnim }                                               from "./ui.js";
 
 let keys = { openai: "", eleven: "" };
 
@@ -73,9 +73,7 @@ window.showResetConfirm = function() {
 window.toggleSession = function() {
   if (sessionActive) {
     stopSession();
-    setStatus("Tippen zum Starten");
   } else {
-    document.getElementById("mic").classList.add("ready");
     startSession(keys);
   }
 };
@@ -89,8 +87,6 @@ window.copyLog   = copyLog;
 
 function initApp() {
   log("INFO", "Blibu gestartet — " + new Date().toLocaleString("de-AT"));
-  document.getElementById("mic").classList.add("ready");
-  setStatus("Tippen zum Starten");
   setAnim("schlaf");
 }
 
