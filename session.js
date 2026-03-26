@@ -216,10 +216,11 @@ async function onRecordingStop() {
     if (!navigator.onLine || err instanceof TypeError) {
       log("ERROR", "Keine Internetverbindung");
       showError("Keine Internetverbindung");
+      setTimeout(() => waitForSpeech(), 4500);
     } else {
       log("ERROR", "Verarbeitungsfehler: " + err.message);
+      setTimeout(() => waitForSpeech(), 1500);
     }
-    setTimeout(() => waitForSpeech(), 1500);
   }
 }
 
@@ -322,6 +323,7 @@ async function blibRespond(userMessage) {
   if (!sessionActive) return;
 
   blibSpeaking = true;
+  let netErr = false;
 
   try {
     const reply    = await askGPT(userMessage);
@@ -339,7 +341,7 @@ async function blibRespond(userMessage) {
   } catch (err) {
     if (!navigator.onLine || err instanceof TypeError) {
       log("ERROR", "Keine Internetverbindung");
-      showError("Keine Internetverbindung");
+      netErr = true;
     } else {
       log("ERROR", "Antwort fehlgeschlagen: " + err.message);
     }
@@ -348,6 +350,7 @@ async function blibRespond(userMessage) {
     stopMouthAnim();
     setAnim("happy");
     setMicState("connected");
+    if (netErr) showError("Keine Internetverbindung");
     setTimeout(() => {
       setAnim("");
       if (sessionActive) waitForSpeech();
