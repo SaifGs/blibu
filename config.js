@@ -9,7 +9,7 @@ export const OPENAI_LLM_MODEL = "gpt-4o-mini";   // Günstig & schnell & smart
 // ── ElevenLabs Stimme ──────────────────────────────────────
 // Auf https://elevenlabs.io/voice-library nach "child" suchen
 // Voice-ID aus der URL kopieren und hier eintragen
-export const ELEVENLABS_VOICE_ID = "NYWrFripBFztqHdZlGg8"; // Flipsi
+export const ELEVENLABS_VOICE_ID = "7Nj1UduP6iY6hWpEDibS"; // bibi blume
 export const ELEVENLABS_MODEL = "eleven_flash_v2_5";
 export const ELEVENLABS_SETTINGS = {
   stability:         0.55,
