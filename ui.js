@@ -18,16 +18,17 @@ const ICON_STOP = `<rect x="6" y="6" width="12" height="12" rx="2"/>`;
 // ── Sterne generieren ─────────────────────────────────────
 (function generateStars() {
   const container = document.getElementById("night-stars");
-  for (let i = 0; i < 70; i++) {
-    const s = document.createElement("div");
-    s.className = "night-star";
+  for (let i = 0; i < 120; i++) {
+    const s    = document.createElement("div");
+    const bright = Math.random() < 0.15;
+    s.className = bright ? "night-star bright" : "night-star";
     s.style.left   = Math.random() * 100 + "%";
-    s.style.top    = Math.random() * 85 + "%";
-    const size = Math.random() * 2.4 + 0.8;
+    s.style.top    = Math.random() * 90  + "%";
+    const size = bright ? (Math.random() * 1.5 + 2) : (Math.random() * 1.8 + 0.5);
     s.style.width  = size + "px";
     s.style.height = size + "px";
-    s.style.animationDelay    = (Math.random() * 4).toFixed(2) + "s";
-    s.style.animationDuration = (Math.random() * 2 + 2).toFixed(2) + "s";
+    s.style.animationDelay    = (Math.random() * 5).toFixed(2) + "s";
+    s.style.animationDuration = (Math.random() * 3 + 2).toFixed(2) + "s";
     container.appendChild(s);
   }
 })();
