@@ -25,6 +25,12 @@
   @keyframes wig { 0%{transform:rotate(0)} 25%{transform:rotate(-11deg) scale(1.1)} 75%{transform:rotate(11deg) scale(1.1)} 100%{transform:rotate(0)} }
   @keyframes thk { 0%,100%{transform:rotate(-4deg)}       50%{transform:rotate(4deg) translateY(-7px)} }
   @keyframes lst { 0%,100%{transform:scale(1)}            50%{transform:scale(1.04)} }
+  .bsvg.schlaf { animation: schlaf 4s ease-in-out infinite; }
+  @keyframes schlaf { 0%,100%{transform:translateY(0) rotate(-.8deg)} 50%{transform:translateY(-5px) rotate(.8deg)} }
+  .eyelid { opacity: 0; transition: opacity .4s; }
+  .bsvg.schlaf .eyelid { opacity: 1; }
+  #pl, #pr { transition: opacity .4s; }
+  .bsvg.schlaf #pl, .bsvg.schlaf #pr { opacity: 0; }
   .mic-wrap { position: absolute; bottom: 1.8rem; display: flex; flex-direction: column; align-items: center; gap: 8px; }
   .mic { width: 80px; height: 80px; border-radius: 50%; background: #1D9E75; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 24px rgba(29,158,117,.4); transition: transform .12s, background .2s, opacity .4s; opacity: 0; pointer-events: none; }
   .mic.ready         { opacity: 1; pointer-events: all; }
@@ -204,6 +210,11 @@
       <ellipse cx="122" cy="242" rx="17" ry="21" fill="#1D9E75"/>
       <ellipse cx="76" cy="257" rx="21" ry="10" fill="#085041"/>
       <ellipse cx="124" cy="257" rx="21" ry="10" fill="#085041"/>
+      <!-- Schlaf-Augen (geschlossen) -->
+      <ellipse class="eyelid" cx="79"  cy="70" rx="18" ry="20" fill="#9FE1CB"/>
+      <ellipse class="eyelid" cx="121" cy="70" rx="18" ry="20" fill="#9FE1CB"/>
+      <path class="eyelid" d="M 62 70 Q 79 80 96 70"  stroke="#085041" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <path class="eyelid" d="M 104 70 Q 121 80 138 70" stroke="#085041" stroke-width="2.5" fill="none" stroke-linecap="round"/>
     </svg>
   </div>
 

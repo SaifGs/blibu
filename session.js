@@ -375,7 +375,7 @@ export function stopSession() {
   stopMouthAnim();
   conversationHistory = [];
 
-  setAnim("");
+  setAnim("schlaf");
   setMicState("idle");
   setStatus("Tippen zum Starten");
 
@@ -395,10 +395,12 @@ export function charTap() {
 
   setTimeout(() => {
     acroPlaying = false;
-    setAnim('');
     if (sessionActive) {
+      setAnim('');
       log("LUIS", "Luis hat Blibu angetippt");
       blibRespond("Luis hat Blibu gekitzelt!");
+    } else {
+      setAnim('schlaf');
     }
   }, 950);
 }

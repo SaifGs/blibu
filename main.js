@@ -5,7 +5,7 @@
 import { STORAGE_KEY_OPENAI, STORAGE_KEY_ELEVENLABS }           from "./config.js";
 import { log, showLog, closeLog, setFilter, clearLog, copyLog }  from "./log.js";
 import { startSession, stopSession, charTap, sessionActive }     from "./session.js";
-import { setStatus }                                             from "./ui.js";
+import { setStatus, setAnim }                                    from "./ui.js";
 
 let keys = { openai: "", eleven: "" };
 
@@ -91,6 +91,7 @@ function initApp() {
   log("INFO", "Blibu gestartet — " + new Date().toLocaleString("de-AT"));
   document.getElementById("mic").classList.add("ready");
   setStatus("Tippen zum Starten");
+  setAnim("schlaf");
 }
 
 window.addEventListener("load", () => {
