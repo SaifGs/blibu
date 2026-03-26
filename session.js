@@ -382,9 +382,23 @@ export function stopSession() {
   log("INFO", "Session beendet");
 }
 
-// ── Blibu kitzeln ─────────────────────────────────────────
+// ── Akrobatik bei Antippen ────────────────────────────────
+const ACROS = ['acro-sprung', 'acro-purzelbaum', 'acro-radschlag', 'acro-stern'];
+let acroPlaying = false;
+
 export function charTap() {
-  if (!sessionActive || blibSpeaking) return;
-  log("LUIS", "Luis hat Blibu angetippt");
-  blibRespond("Luis hat Blibu gekitzelt!");
+  if (blibSpeaking || acroPlaying) return;
+
+  const anim = ACROS[Math.floor(Math.random() * ACROS.length)];
+  acroPlaying = true;
+  setAnim(anim);
+
+  setTimeout(() => {
+    acroPlaying = false;
+    setAnim('');
+    if (sessionActive) {
+      log("LUIS", "Luis hat Blibu angetippt");
+      blibRespond("Luis hat Blibu gekitzelt!");
+    }
+  }, 950);
 }
