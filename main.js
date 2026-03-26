@@ -90,6 +90,21 @@ function initApp() {
   setAnim("schlaf");
 }
 
+// ── Vollbild ──────────────────────────────────────────────
+function enterFullscreen() {
+  const el = document.documentElement;
+  if      (el.requestFullscreen)       el.requestFullscreen().catch(() => {});
+  else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+}
+
+// Beim ersten Tippen Vollbild aktivieren
+document.addEventListener("touchstart", enterFullscreen, { once: true });
+document.addEventListener("click",      enterFullscreen, { once: true });
+
+// Wenn jemand Vollbild verlässt → sofort wieder rein
+document.addEventListener("fullscreenchange",       () => { if (!document.fullscreenElement)       setTimeout(enterFullscreen, 400); });
+document.addEventListener("webkitfullscreenchange", () => { if (!document.webkitFullscreenElement) setTimeout(enterFullscreen, 400); });
+
 window.addEventListener("load", () => {
   log("INFO", "Seite geladen");
   if (loadKeys()) {
