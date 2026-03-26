@@ -2,6 +2,7 @@
 // ui.js — Benutzeroberfläche
 // ══════════════════════════════════════════════════════════
 
+const app       = document.getElementById("app");
 const bsvg      = document.getElementById("bsvg");
 const sleepBtn  = document.getElementById("sleep-btn");
 const sleepIcon = document.getElementById("sleep-icon");
@@ -14,25 +15,44 @@ const pr        = document.getElementById("pr");
 const ICON_MOON = `<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>`;
 const ICON_STOP = `<rect x="6" y="6" width="12" height="12" rx="2"/>`;
 
+// ── Sterne generieren ─────────────────────────────────────
+(function generateStars() {
+  const container = document.getElementById("night-stars");
+  for (let i = 0; i < 70; i++) {
+    const s = document.createElement("div");
+    s.className = "night-star";
+    s.style.left   = Math.random() * 100 + "%";
+    s.style.top    = Math.random() * 85 + "%";
+    const size = Math.random() * 2.4 + 0.8;
+    s.style.width  = size + "px";
+    s.style.height = size + "px";
+    s.style.animationDelay    = (Math.random() * 4).toFixed(2) + "s";
+    s.style.animationDuration = (Math.random() * 2 + 2).toFixed(2) + "s";
+    container.appendChild(s);
+  }
+})();
+
 // ── Körper-Animationen ────────────────────────────────────
 export function setAnim(state) {
   bsvg.setAttribute("class", "bsvg " + (state || ""));
   zzzWrap.classList.toggle("show", state === "schlaf");
+  app.classList.toggle("night", state === "schlaf");
 }
 
 // ── Gesprächs-Zustand ─────────────────────────────────────
-// idle         — keine Session, Blibu schläft
-// connected    — wartet auf Luis
-// user-talking — Luis spricht
-// blibu-talking— Blibu antwortet
+// idle          — keine Session
+// connected     — wartet auf Luis
+// user-talking  — Luis spricht
+// blibu-talking — Blibu antwortet
 export function setMicState(state) {
-  // Ringe um Blibu wenn Luis spricht
   charRings.classList.toggle("show", state === "user-talking");
 
-  // Talk-Pill oben
   talkPill.className = "talk-pill";
   talkPill.textContent = "";
-  if (state === "user-talking") {
+  if (state === "connected") {
+    talkPill.className = "talk-pill connected";
+    talkPill.textContent = "Luis spricht";
+  } else if (state === "user-talking") {
     talkPill.className = "talk-pill luis";
     talkPill.textContent = "Luis spricht...";
   } else if (state === "blibu-talking") {
@@ -40,7 +60,6 @@ export function setMicState(state) {
     talkPill.textContent = "Blibu antwortet...";
   }
 
-  // Sleep-Button Icon & Farbe
   if (state === "idle") {
     sleepBtn.style.background = "#1D9E75";
     sleepBtn.style.boxShadow  = "0 6px 28px rgba(29,158,117,.45)";
@@ -52,7 +71,6 @@ export function setMicState(state) {
   }
 }
 
-// ── Status-Text (wird nicht mehr angezeigt, bleibt für Kompatibilität) ──
 export function setStatus(_text) {}
 
 // ── Augen folgen Finger/Maus ──────────────────────────────
