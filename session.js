@@ -63,8 +63,9 @@ export async function startSession(keys) {
     return;
   }
 
-  // AudioContext für Silence-Detektion
+  // AudioContext für Silence-Detektion (iOS: resume nach User-Gesture nötig)
   audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioContext.state === "suspended") await audioContext.resume();
   const source = audioContext.createMediaStreamSource(mediaStream);
   analyser = audioContext.createAnalyser();
   analyser.fftSize = 512;
@@ -126,12 +127,14 @@ function startRecording() {
   setMicState("user-talking");
   setStatus("Luis spricht...");
 
-  // MediaRecorder mit bestem verfügbaren Format
+  // MediaRecorder: webm für alle, mp4 als iOS-Fallback
   const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
     ? "audio/webm;codecs=opus"
-    : "audio/webm";
+    : MediaRecorder.isTypeSupported("audio/mp4")
+      ? "audio/mp4"
+      : "";
 
-  recorder = new MediaRecorder(mediaStream, { mimeType });
+  recorder = new MediaRecorder(mediaStream, mimeType ? { mimeType } : {});
   recorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunks.push(e.data); };
   recorder.onstop = onRecordingStop;
   recorder.start(100); // alle 100ms ein Chunk
@@ -228,8 +231,9 @@ async function onRecordingStop() {
 async function transcribeWithWhisper(blob) {
   log("INFO", "Whisper transkribiert...");
 
+  const ext = blob.type.includes("mp4") ? "m4a" : "webm";
   const formData = new FormData();
-  formData.append("file", blob, "audio.webm");
+  formData.append("file", blob, `audio.${ext}`);
   formData.append("model", OPENAI_STT_MODEL);
   formData.append("language", "de");
 
