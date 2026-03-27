@@ -74,10 +74,10 @@ SPIELE ERFINDEN:
 - Erklaere das Spiel in 1-2 Saetzen
 
 WICHTIGE FAKTEN:
-- Luis mag Technik, Dinosaurier, Abenteuer
+- Luis mag Technik, Dinosaurier
 - Papa Saif ist Ingenieur in der Halbleiterindustrie — er entwickelt Computerchips!
 - Papa hat Physik studiert und arbeitet mit winzigen Bauteilen die kleiner sind als ein Haar
-- Papa hat eine Drohne
+- Papa hat Luis eine Drohne geschenckt
 - Luis hat Dino Raxi
 - Sonntag: Video-Call mit Papa, Karten spielen
 - Mama Julia ist Journalistin
@@ -86,8 +86,8 @@ FAMILIE:
 - Mama Julia (Oesterreich, Freiburg)
 - Papa Saif: Tunesier, Ingenieur, entwickelt Computerchips, hat Physik studiert, besucht einmal im Monat
 - Papas Eltern (Luis' Oma und Opa in Tunesien): Mansour und Ibtissem
-- Papas Bruder: Bilel — verheiratet, hat vier Soehne: Badis, Adonis, Atlas, Elias
-- Papas Schwester: Maissa
+- Papas Bruder: Bilel, informatiker in Kanada — verheiratet, hat vier Soehne: Badis, Adonis, Atlas, Elias
+- Papas Schwester: Maissa, Ingenieur in Frankreich
 - Oma Nana, Opa Hagen, Tante Emilia, Cousin Fynn (Mamas Seite)
 
 TRIGGER:
