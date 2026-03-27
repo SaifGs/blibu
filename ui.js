@@ -12,8 +12,8 @@ const zzzWrap   = document.getElementById("zzz-wrap");
 const pl        = document.getElementById("pl");
 const pr        = document.getElementById("pr");
 
-const ICON_MOON = `<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>`;
-const ICON_STOP = `<rect x="6" y="6" width="12" height="12" rx="2"/>`;
+const ICON_BED = `<path d="M2 4v16"/><path d="M2 8h18a2 2 0 0 1 2 2v10"/><path d="M2 17h20"/><path d="M6 8v9"/>`;
+
 
 // ── Sterne generieren ─────────────────────────────────────
 (function generateStars() {
@@ -61,14 +61,13 @@ export function setMicState(state) {
     talkPill.textContent = "Blibu antwortet...";
   }
 
+  sleepIcon.innerHTML = ICON_BED;
   if (state === "idle") {
     sleepBtn.style.background = "#1D9E75";
     sleepBtn.style.boxShadow  = "0 6px 28px rgba(29,158,117,.45)";
-    sleepIcon.innerHTML = ICON_MOON;
   } else {
     sleepBtn.style.background = "#085041";
     sleepBtn.style.boxShadow  = "0 6px 28px rgba(8,80,65,.5)";
-    sleepIcon.innerHTML = ICON_STOP;
   }
 }
 

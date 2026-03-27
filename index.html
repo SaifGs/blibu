@@ -40,7 +40,7 @@
   .sleep-wrap { position: absolute; bottom: 1.8rem; }
   .sleep-btn { width: 88px; height: 88px; border-radius: 50%; background: #1D9E75; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 28px rgba(29,158,117,.45); transition: transform .12s, background .35s, box-shadow .35s; }
   .sleep-btn:active { transform: scale(.91); }
-  .sleep-btn svg { width: 40px; height: 40px; fill: white; }
+  .sleep-btn svg { width: 40px; height: 40px; fill: none; stroke: white; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
   .talk-pill { font-size: clamp(.78rem,2.2vw,.96rem); padding: 5px 20px; border-radius: 20px; color: white; opacity: 0; transition: opacity .35s; pointer-events: none; min-height: 1.9em; display: flex; align-items: center; justify-content: center; }
   .talk-pill.luis      { opacity: 1; background: rgba(226,75,74,.88); }
   .talk-pill.blibu     { opacity: 1; background: rgba(239,159,39,.88); }
@@ -243,7 +243,7 @@
   <div class="sleep-wrap">
     <button class="sleep-btn" id="sleep-btn" onclick="toggleSession()">
       <svg id="sleep-icon" viewBox="0 0 24 24">
-        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        <path d="M2 4v16"/><path d="M2 8h18a2 2 0 0 1 2 2v10"/><path d="M2 17h20"/><path d="M6 8v9"/>
       </svg>
     </button>
   </div>

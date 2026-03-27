@@ -276,7 +276,7 @@ async function askGPT(userMessage) {
     },
     body: JSON.stringify({
       model:       OPENAI_LLM_MODEL,
-      max_tokens:  120,
+      max_tokens:  300,
       temperature: 0.9,
       messages: [
         { role: "system", content: PERSONA },
