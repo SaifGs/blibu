@@ -306,7 +306,7 @@ async function askGPT(userMessage) {
 // ── ElevenLabs TTS ────────────────────────────────────────
 async function speakWithElevenLabs(text) {
   const res = await fetch(
-    `https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}`,
+    `https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}/stream`,
     {
       method: "POST",
       headers: {

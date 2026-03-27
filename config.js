@@ -19,7 +19,7 @@ export const ELEVENLABS_SETTINGS = {
 };
 
 // ── Aufnahme-Einstellungen ─────────────────────────────────
-export const SILENCE_TIMEOUT_MS = 1800;   // ms Stille bis Aufnahme endet
+export const SILENCE_TIMEOUT_MS = 900;    // ms Stille bis Aufnahme endet
 export const SILENCE_THRESHOLD  = 0.015;  // Lautstärke-Schwelle (0–1)
 export const MIN_RECORD_MS      = 400;    // Mindest-Aufnahmedauer
 
