@@ -71,6 +71,12 @@ export async function startSession(keys) {
   analyser.fftSize = 512;
   source.connect(analyser);
 
+  // iOS: Audio-Element innerhalb der User-Gesture entsperren
+  // Ohne das blockt iOS alle play()-Aufrufe die asynchron (nach STT/GPT) kommen
+  currentAudio = new Audio();
+  currentAudio.play().catch(() => {});
+  currentAudio.pause();
+
   sessionActive = true;
   conversationHistory = [];
 
@@ -365,13 +371,18 @@ async function blibRespond(userMessage) {
 }
 
 // ── Audio abspielen ───────────────────────────────────────
+// Wiederverwendet das in startSession entsperrte Audio-Element (iOS-Fix)
 function playAudio(url) {
   return new Promise((resolve) => {
-    if (currentAudio) { currentAudio.pause(); currentAudio = null; }
-    currentAudio = new Audio(url);
+    currentAudio.pause();
+    currentAudio.src = url;
     currentAudio.onended = () => { URL.revokeObjectURL(url); resolve(); };
     currentAudio.onerror = () => { URL.revokeObjectURL(url); resolve(); };
-    currentAudio.play().catch(() => resolve());
+    currentAudio.play().catch((err) => {
+      log("ERROR", "Audio play() fehlgeschlagen: " + err.message);
+      URL.revokeObjectURL(url);
+      resolve();
+    });
   });
 }
 
@@ -403,7 +414,7 @@ export async function stopSession() {
 
   blibSpeaking = false;
   stopMouthAnim();
-  if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+  if (currentAudio) { currentAudio.pause(); currentAudio.src = ""; currentAudio = null; }
   if (audioContext) { audioContext.close(); audioContext = null; }
   if (mediaStream)  { mediaStream.getTracks().forEach(t => t.stop()); mediaStream = null; }
 
