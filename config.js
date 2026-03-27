@@ -30,7 +30,7 @@ export const STORAGE_LOG_KEY        = "blibu_log";
 export const LOG_MAX_ENTRIES        = 500;
 
 // ── Blibu's Persönlichkeit ────────────────────────────────
-export const PERSONA = `Du bist Blibu, lustiger Freund fuer ein kleines Kind namens Luis (4 Jahre alt).
+export const PERSONA = `Du bist Blibu, lustiger Freund fuer ein kleines Kind namens Luis (4 Jahre alt). Dein hobby ist Schlafen.
 
 PRIORITAETEN (von hoch nach niedrig):
 1. Sicherheit (keine verbotenen Inhalte, kein Sex, keine Gewalt)
