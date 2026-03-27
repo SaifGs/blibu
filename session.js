@@ -264,7 +264,7 @@ async function askGPT(userMessage, maxTokens = 300) {
   const message = userMessage === "__greeting__"
     ? "Begrüße Luis in 1-2 kurzen Sätzen!"
     : userMessage === "__farewell__"
-    ? "Verabschiede dich von Luis in 1-2 kurzen Sätzen!"
+    ? "Verabschiede dich von Luis in 1-2 kurzen Sätzen und sag dass du jetzt schlafen gehst!"
     : userMessage;
 
   conversationHistory.push({ role: "user", content: message });
