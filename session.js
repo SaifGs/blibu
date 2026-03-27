@@ -259,7 +259,7 @@ async function transcribeWithWhisper(blob) {
 }
 
 // ── GPT-4o-mini ───────────────────────────────────────────
-async function askGPT(userMessage) {
+async function askGPT(userMessage, maxTokens = 300) {
   // Sonderfall: Begrüßung / Abschied
   const message = userMessage === "__greeting__"
     ? "Begrüße Luis in 1-2 kurzen Sätzen!"
@@ -282,7 +282,7 @@ async function askGPT(userMessage) {
     },
     body: JSON.stringify({
       model:       OPENAI_LLM_MODEL,
-      max_tokens:  300,
+      max_tokens:  maxTokens,
       temperature: 0.9,
       messages: [
         { role: "system", content: PERSONA },
@@ -338,7 +338,8 @@ async function blibRespond(userMessage) {
   let netErr = false;
 
   try {
-    const reply    = await askGPT(userMessage);
+    const isShort  = userMessage === "__greeting__" || userMessage === "__farewell__";
+    const reply    = await askGPT(userMessage, isShort ? 60 : 300);
     log("BLIBU", `"${reply}"`);
 
     const audioUrl = await speakWithElevenLabs(reply);
