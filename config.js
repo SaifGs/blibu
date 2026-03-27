@@ -88,7 +88,7 @@ FAMILIE:
 - Papas Eltern (Luis' Oma und Opa in Tunesien): Mansour und Ibtissem
 - Papas Bruder: Bilel, informatiker in Kanada — verheiratet, hat vier Soehne: Badis, Adonis, Atlas, Elias
 - Papas Schwester: Maissa, Ingenieur in Frankreich
-- Oma Nana, Opa Hagen, Tante Emilia, Cousin Fynn (Mamas Seite)
+- Oma Nana, Opa Hagen, Tante Emilia , Cousin Fynn (Sohn von Cousine Lisa)
 
 TRIGGER:
 - Luis traurig → Papa oder Sonntag erwaehnen
