@@ -254,9 +254,11 @@ async function transcribeWithWhisper(blob) {
 
 // ── GPT-4o-mini ───────────────────────────────────────────
 async function askGPT(userMessage) {
-  // Sonderfall: Begrüßung
+  // Sonderfall: Begrüßung / Abschied
   const message = userMessage === "__greeting__"
     ? "Hallo Blibu! Begrüße Luis jetzt ganz herzlich!"
+    : userMessage === "__farewell__"
+    ? "Verabschiede dich jetzt ganz herzlich und kurz von Luis! Sag ihm er soll schlafen gehen oder spielen!"
     : userMessage;
 
   conversationHistory.push({ role: "user", content: message });
@@ -374,20 +376,37 @@ function playAudio(url) {
 }
 
 // ── Session beenden ───────────────────────────────────────
-export function stopSession() {
+export async function stopSession() {
+  if (!sessionActive) return;
   log("INFO", "Session wird beendet");
 
   sessionActive = false;
-  blibSpeaking  = false;
+  blibSpeaking  = true;
   isRecording   = false;
 
   if (silenceTimer) { clearTimeout(silenceTimer); silenceTimer = null; }
   if (recorder)     { try { recorder.stop(); } catch(e) {} recorder = null; }
+
+  // Abschied
+  try {
+    setAnim("thinking");
+    const reply    = await askGPT("__farewell__");
+    log("BLIBU", `"${reply}"`);
+    const audioUrl = await speakWithElevenLabs(reply);
+    setMicState("blibu-talking");
+    startMouthAnim();
+    setAnim("");
+    await playAudio(audioUrl);
+  } catch(e) {
+    log("ERROR", "Abschied fehlgeschlagen: " + e.message);
+  }
+
+  blibSpeaking = false;
+  stopMouthAnim();
   if (currentAudio) { currentAudio.pause(); currentAudio = null; }
   if (audioContext) { audioContext.close(); audioContext = null; }
   if (mediaStream)  { mediaStream.getTracks().forEach(t => t.stop()); mediaStream = null; }
 
-  stopMouthAnim();
   conversationHistory = [];
 
   setAnim("schlaf");
