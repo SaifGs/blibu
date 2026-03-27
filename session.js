@@ -262,9 +262,9 @@ async function transcribeWithWhisper(blob) {
 async function askGPT(userMessage) {
   // Sonderfall: Begrüßung / Abschied
   const message = userMessage === "__greeting__"
-    ? "Hallo Blibu! Begrüße Luis jetzt ganz herzlich!"
+    ? "Begrüße Luis in 1-2 kurzen Sätzen!"
     : userMessage === "__farewell__"
-    ? "Verabschiede dich jetzt ganz herzlich und kurz von Luis! Sag ihm er soll schlafen gehen oder spielen!"
+    ? "Verabschiede dich von Luis in 1-2 kurzen Sätzen!"
     : userMessage;
 
   conversationHistory.push({ role: "user", content: message });
