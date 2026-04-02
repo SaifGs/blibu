@@ -263,8 +263,6 @@ async function askGPT(userMessage, maxTokens = 300) {
   // Sonderfall: Begrüßung / Abschied
   const message = userMessage === "__greeting__"
     ? "Begrüße Luis in 1-2 kurzen Sätzen!"
-    : userMessage === "__farewell__"
-    ? "Verabschiede dich von Luis in 1-2 kurzen Sätzen und sag dass du jetzt schlafen gehst!"
     : userMessage;
 
   conversationHistory.push({ role: "user", content: message });
@@ -338,8 +336,7 @@ async function blibRespond(userMessage) {
   let netErr = false;
 
   try {
-    const isShort  = userMessage === "__greeting__" || userMessage === "__farewell__";
-    const reply    = await askGPT(userMessage, isShort ? 60 : 300);
+    const reply    = await askGPT(userMessage, userMessage === "__greeting__" ? 60 : 300);
     log("BLIBU", `"${reply}"`);
 
     const audioUrl = await speakWithElevenLabs(reply);
@@ -399,12 +396,10 @@ export async function stopSession() {
   if (silenceTimer) { clearTimeout(silenceTimer); silenceTimer = null; }
   if (recorder)     { try { recorder.stop(); } catch(e) {} recorder = null; }
 
-  // Abschied
+  // Sofortiger Abschied — kein GPT, fixer Text
   try {
-    setAnim("thinking");
-    const reply    = await askGPT("__farewell__");
-    log("BLIBU", `"${reply}"`);
-    const audioUrl = await speakWithElevenLabs(reply);
+    const audioUrl = await speakWithElevenLabs("OK, ich gehe schlafen. Tschüss Luis!");
+    log("BIBU", '"OK, ich gehe schlafen. Tschüss Luis!"');
     setMicState("blibu-talking");
     startMouthAnim();
     setAnim("");
