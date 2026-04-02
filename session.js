@@ -374,8 +374,9 @@ function playAudio(url) {
   return new Promise((resolve) => {
     currentAudio.pause();
     currentAudio.src = url;
+    currentAudio.load(); // iOS: src-Wechsel braucht explizites load() vor play()
     currentAudio.onended = () => { URL.revokeObjectURL(url); resolve(); };
-    currentAudio.onerror = () => { URL.revokeObjectURL(url); resolve(); };
+    currentAudio.onerror = (e) => { log("ERROR", "Audio Ladefehler: " + (e.message || JSON.stringify(e))); URL.revokeObjectURL(url); resolve(); };
     currentAudio.play().catch((err) => {
       log("ERROR", "Audio play() fehlgeschlagen: " + err.message);
       URL.revokeObjectURL(url);
