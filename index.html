@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#d4f3e8">
-<title>Blibu</title>
+<title>Bibu</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" href="icon-192.png">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap" rel="stylesheet">
@@ -143,7 +143,7 @@
 <div class="overlay" id="overlay">
   <div class="setup-box">
     <h2>Hallo Papa! 👋</h2>
-    <p>Gib deine API Keys ein damit Blibu mit Luis sprechen kann.</p>
+    <p>Gib deine API Keys ein damit Bibu mit Luis sprechen kann.</p>
 
     <span class="label">🤖 OpenAI API Key (Whisper + GPT)</span>
     <input type="password" id="openai-key-input" placeholder="sk-..."
@@ -154,7 +154,7 @@
       autocomplete="off" spellcheck="false"
       onkeydown="if(event.key==='Enter') saveKey()"/>
 
-    <button class="save-btn" onclick="saveKey()">Blibu starten! 🚀</button>
+    <button class="save-btn" onclick="saveKey()">Bibu starten! 🚀</button>
     <div class="err" id="key-err"></div>
     <div class="hint">
       OpenAI Key: <strong>platform.openai.com</strong> → API keys<br>
@@ -165,20 +165,20 @@
   </div>
 </div>
 
-<!-- Log Overlay — Papa öffnet mit Doppeltipp auf "Blibu" -->
+<!-- Log Overlay — Papa öffnet mit Doppeltipp auf "Bibu" -->
 <div class="log-overlay hidden" id="log-overlay">
   <div class="log-header">
-    <span>Blibu Log</span>
+    <span>Bibu Log</span>
     <button onclick="closeLog()">Schliessen</button>
   </div>
   <div class="log-filters">
     <button class="f-all active" onclick="setFilter('ALL')">Alle</button>
     <button class="f-info"       onclick="setFilter('INFO')">System</button>
     <button class="f-luis"       onclick="setFilter('LUIS')">Luis</button>
-    <button class="f-blibu"      onclick="setFilter('BLIBU')">Blibu</button>
+    <button class="f-blibu"      onclick="setFilter('BLIBU')">Bibu</button>
     <button class="f-error"      onclick="setFilter('ERROR')">Fehler</button>
   </div>
-  <div class="log-stats" id="log-stats">Sessions: 0 | Luis: 0 | Blibu: 0 | Fehler: 0</div>
+  <div class="log-stats" id="log-stats">Sessions: 0 | Luis: 0 | Bibu: 0 | Fehler: 0</div>
   <div class="log-body" id="log-body"></div>
   <div class="log-footer">
     <button onclick="copyLog()">Kopieren</button>

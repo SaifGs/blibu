@@ -2,12 +2,12 @@
 // log.js — Persistentes Logging
 //
 // Alle Ereignisse werden in localStorage gespeichert.
-// Papa öffnet den Log mit Doppeltipp auf "Blibu".
+// Papa öffnet den Log mit Doppeltipp auf "Bibu".
 //
 // Log-Level:
 //   INFO  = System-Events (Verbindung, Session, etc.)
 //   LUIS  = Was Luis gesagt/getan hat
-//   BLIBU = Was Blibu gesagt hat
+//   BLIBU = Was Bibu gesagt hat
 //   WARN  = Warnungen
 //   ERROR = Fehler
 // ══════════════════════════════════════════════════════════
@@ -18,7 +18,7 @@ import { STORAGE_LOG_KEY, LOG_MAX_ENTRIES } from "./config.js";
 let activeFilter = "ALL";
 
 // Statistik-Zähler
-let stats = { sessions: 0, luis: 0, blibu: 0, errors: 0 };
+let stats = { sessions: 0, luis: 0, bibu: 0, errors: 0 };
 
 // ── Log lesen/schreiben ───────────────────────────────────
 
@@ -54,7 +54,7 @@ export function log(level, message) {
 
   // Statistiken
   if (level === "LUIS")                          stats.luis++;
-  else if (level === "BLIBU")                    stats.blibu++;
+  else if (level === "BLIBU")                    stats.bibu++;
   else if (level === "ERROR")                    stats.errors++;
   else if (message.includes("Session startet")) stats.sessions++;
   updateStats();
@@ -89,10 +89,10 @@ function renderAll() {
   body.innerHTML = "";
 
   // Statistiken neu berechnen
-  stats = { sessions: 0, luis: 0, blibu: 0, errors: 0 };
+  stats = { sessions: 0, luis: 0, bibu: 0, errors: 0 };
   entries.forEach(e => {
     if (e.level === "LUIS")                          stats.luis++;
-    else if (e.level === "BLIBU")                    stats.blibu++;
+    else if (e.level === "BLIBU")                    stats.bibu++;
     else if (e.level === "ERROR")                    stats.errors++;
     else if (e.message?.includes("Session startet")) stats.sessions++;
 
@@ -112,7 +112,7 @@ function updateStats() {
   if (!el) return;
   el.textContent =
     `Sessions: ${stats.sessions}  |  Luis: ${stats.luis} Nachrichten` +
-    `  |  Blibu: ${stats.blibu} Nachrichten  |  Fehler: ${stats.errors}`;
+    `  |  Bibu: ${stats.bibu} Nachrichten  |  Fehler: ${stats.errors}`;
 }
 
 // ── Öffentliche Funktionen (werden von index.html aufgerufen) ──
@@ -141,7 +141,7 @@ export function setFilter(level) {
 export function clearLog() {
   if (!confirm("Gesamten Log loeschen?")) return;
   localStorage.removeItem(STORAGE_LOG_KEY);
-  stats = { sessions: 0, luis: 0, blibu: 0, errors: 0 };
+  stats = { sessions: 0, luis: 0, bibu: 0, errors: 0 };
   document.getElementById("log-body").innerHTML = "";
   updateStats();
   log("INFO", "Log geleert");

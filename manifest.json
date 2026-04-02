@@ -1,7 +1,7 @@
 {
-  "name": "Blibu",
-  "short_name": "Blibu",
-  "description": "Blibus lustiger KI-Freund für Luis",
+  "name": "Bibu",
+  "short_name": "Bibu",
+  "description": "Bibus lustiger KI-Freund für Luis",
   "start_url": "./index.html",
   "display": "fullscreen",
   "orientation": "portrait",

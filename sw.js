@@ -1,5 +1,5 @@
-// Blibu Service Worker — ermöglicht PWA-Installation
-const CACHE = 'blibu-v1';
+// Bibu Service Worker — ermöglicht PWA-Installation
+const CACHE = 'bibu-v1';
 const FILES = ['./blibu.html', './manifest.json'];
 
 self.addEventListener('install', e => {

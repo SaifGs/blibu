@@ -5,7 +5,7 @@
 //   1. MediaRecorder nimmt Luis' Stimme auf
 //   2. Silence-Detektion erkennt wann Luis fertig ist
 //   3. Whisper (OpenAI) transkribiert das Audio
-//   4. GPT-4o-mini generiert Blibu's Antwort
+//   4. GPT-4o-mini generiert Bibu's Antwort
 //   5. ElevenLabs spricht die Antwort mit Kinderstimme
 // ══════════════════════════════════════════════════════════
 
@@ -206,7 +206,7 @@ async function onRecordingStop() {
 
   setAnim("thinking");
   setMicState("connected");
-  setStatus("Blibu denkt...");
+  setStatus("Bibu denkt...");
 
   try {
     // 1. Whisper STT
@@ -330,7 +330,7 @@ async function speakWithElevenLabs(text) {
   return URL.createObjectURL(blob);
 }
 
-// ── Blibu antwortet ───────────────────────────────────────
+// ── Bibu antwortet ───────────────────────────────────────
 async function blibRespond(userMessage) {
   if (!sessionActive) return;
 
@@ -443,8 +443,8 @@ export function charTap() {
     acroPlaying = false;
     if (sessionActive) {
       setAnim('');
-      log("LUIS", "Luis hat Blibu angetippt");
-      blibRespond("Luis hat Blibu gekitzelt!");
+      log("LUIS", "Luis hat Bibu angetippt");
+      blibRespond("Luis hat Bibu gekitzelt!");
     } else {
       setAnim('schlaf');
     }

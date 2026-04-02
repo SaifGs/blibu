@@ -1,7 +1,7 @@
 // ══════════════════════════════════════════════════════════
 // mouth.js — Mund-Animation
 //
-// Blibu hat 5 Mund-Formen die reihum gewechselt werden
+// Bibu hat 5 Mund-Formen die reihum gewechselt werden
 // während er spricht — sieht realistischer aus als nur auf/zu.
 //
 // Jede Form besteht aus:

@@ -44,7 +44,7 @@ export function setAnim(state) {
 // idle          — keine Session
 // connected     — wartet auf Luis
 // user-talking  — Luis spricht
-// blibu-talking — Blibu antwortet
+// blibu-talking — Bibu antwortet
 export function setMicState(state) {
   charRings.classList.toggle("show", state === "user-talking");
 
@@ -58,7 +58,7 @@ export function setMicState(state) {
     talkPill.textContent = "Luis spricht...";
   } else if (state === "blibu-talking") {
     talkPill.className = "talk-pill blibu";
-    talkPill.textContent = "Blibu antwortet...";
+    talkPill.textContent = "Bibu antwortet...";
   }
 
   sleepIcon.innerHTML = ICON_BED;

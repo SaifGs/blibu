@@ -86,7 +86,7 @@ window.clearLog  = clearLog;
 window.copyLog   = copyLog;
 
 function initApp() {
-  log("INFO", "Blibu gestartet — " + new Date().toLocaleString("de-AT"));
+  log("INFO", "Bibu gestartet — " + new Date().toLocaleString("de-AT"));
   setAnim("schlaf");
 }
 
