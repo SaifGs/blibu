@@ -12,9 +12,9 @@
 import {
   OPENAI_STT_MODEL,
   OPENAI_LLM_MODEL,
-  ELEVENLABS_VOICE_ID,
-  ELEVENLABS_MODEL,
-  ELEVENLABS_SETTINGS,
+  OPENAI_TTS_MODEL,
+  OPENAI_TTS_VOICE,
+  OPENAI_TTS_SPEED,
   SILENCE_TIMEOUT_MS,
   SILENCE_THRESHOLD,
   MIN_RECORD_MS,
@@ -28,8 +28,7 @@ import { setAnim, setMicState, setStatus, showError } from "./ui.js";
 export let sessionActive = false;
 export let blibSpeaking  = false;
 
-let openaiKey  = "";
-let elevenKey  = "";
+let openaiKey = "";
 
 let mediaStream     = null;
 let audioContext    = null;
@@ -47,7 +46,6 @@ export async function startSession(keys) {
   if (sessionActive) return;
 
   openaiKey = keys.openai;
-  elevenKey = keys.eleven;
 
   log("INFO", "Session startet (Whisper + GPT-4o-mini + ElevenLabs)...");
   setStatus("Verbinde...");
@@ -299,27 +297,25 @@ async function askGPT(userMessage, maxTokens = 300) {
   return reply;
 }
 
-// ── ElevenLabs TTS ────────────────────────────────────────
-async function speakWithElevenLabs(text) {
-  const res = await fetch(
-    `https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}/stream`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "xi-api-key":   elevenKey,
-      },
-      body: JSON.stringify({
-        text,
-        model_id:       ELEVENLABS_MODEL,
-        voice_settings: ELEVENLABS_SETTINGS,
-      }),
-    }
-  );
+// ── OpenAI TTS ────────────────────────────────────────────
+async function speakWithOpenAI(text) {
+  const res = await fetch("https://api.openai.com/v1/audio/speech", {
+    method: "POST",
+    headers: {
+      Authorization:  `Bearer ${openaiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: OPENAI_TTS_MODEL,
+      input: text,
+      voice: OPENAI_TTS_VOICE,
+      speed: OPENAI_TTS_SPEED,
+    }),
+  });
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(`ElevenLabs Fehler: ${res.status} — ${err.detail?.message || ""}`);
+    throw new Error(`OpenAI TTS Fehler: ${res.status} — ${err.error?.message || ""}`);
   }
 
   const blob = await res.blob();
@@ -337,7 +333,7 @@ async function blibRespond(userMessage) {
     const reply    = await askGPT(userMessage, userMessage === "__greeting__" ? 60 : 300);
     log("BLIBU", `"${reply}"`);
 
-    const audioUrl = await speakWithElevenLabs(reply);
+    const audioUrl = await speakWithOpenAI(reply);
 
     setMicState("blibu-talking");
     setStatus("");
@@ -397,7 +393,7 @@ export async function stopSession() {
 
   // Sofortiger Abschied — kein GPT, fixer Text
   try {
-    const audioUrl = await speakWithElevenLabs("OK, ich gehe schlafen. Tschüss Luis!");
+    const audioUrl = await speakWithOpenAI("OK, ich gehe schlafen. Tschüss Luis!");
     log("BIBU", '"OK, ich gehe schlafen. Tschüss Luis!"');
     setMicState("blibu-talking");
     startMouthAnim();

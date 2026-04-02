@@ -2,25 +2,23 @@
 // main.js — App-Einstiegspunkt
 // ══════════════════════════════════════════════════════════
 
-import { STORAGE_KEY_OPENAI, STORAGE_KEY_ELEVENLABS }           from "./config.js";
+import { STORAGE_KEY_OPENAI }                                    from "./config.js";
 import { log, showLog, closeLog, setFilter, clearLog, copyLog }  from "./log.js";
 import { startSession, stopSession, charTap, sessionActive }     from "./session.js";
 import { setAnim }                                               from "./ui.js";
 
-let keys = { openai: "", eleven: "" };
+let keys = { openai: "" };
 
 function loadKeys() {
   try {
     const o = localStorage.getItem(STORAGE_KEY_OPENAI);
-    const e = localStorage.getItem(STORAGE_KEY_ELEVENLABS);
-    if (o && e) {
+    if (o) {
       keys.openai = atob(o);
-      keys.eleven = atob(e);
-      log("INFO", "API Keys geladen");
+      log("INFO", "API Key geladen");
       return true;
     }
   } catch(err) {
-    log("ERROR", "Keys laden: " + err.message);
+    log("ERROR", "Key laden: " + err.message);
   }
   return false;
 }
@@ -29,45 +27,35 @@ function loadKeys() {
 
 window.saveKey = function() {
   const openaiInput = document.getElementById("openai-key-input");
-  const elevenInput = document.getElementById("eleven-key-input");
   const err         = document.getElementById("key-err");
 
   const oVal = openaiInput.value.trim();
-  const eVal = elevenInput.value.trim();
 
   if (!oVal.startsWith("sk-")) {
     err.textContent = "OpenAI Key muss mit sk- beginnen";
     return;
   }
-  if (!eVal || eVal.length < 10) {
-    err.textContent = "ElevenLabs Key eingeben";
-    return;
-  }
 
   try {
-    localStorage.setItem(STORAGE_KEY_OPENAI,     btoa(oVal));
-    localStorage.setItem(STORAGE_KEY_ELEVENLABS, btoa(eVal));
+    localStorage.setItem(STORAGE_KEY_OPENAI, btoa(oVal));
     keys.openai = oVal;
-    keys.eleven = eVal;
-    log("INFO", "API Keys gespeichert");
+    log("INFO", "API Key gespeichert");
     document.getElementById("overlay").classList.add("hidden");
     setTimeout(initApp, 300);
   } catch(e) {
     err.textContent = "Speichern fehlgeschlagen: " + e.message;
-    log("ERROR", "Keys speichern: " + e.message);
+    log("ERROR", "Key speichern: " + e.message);
   }
 };
 
 window.showResetConfirm = function() {
-  if (!confirm("API Keys wirklich loeschen?")) return;
+  if (!confirm("API Key wirklich loeschen?")) return;
   localStorage.removeItem(STORAGE_KEY_OPENAI);
-  localStorage.removeItem(STORAGE_KEY_ELEVENLABS);
-  keys = { openai: "", eleven: "" };
+  keys = { openai: "" };
   document.getElementById("openai-key-input").value = "";
-  document.getElementById("eleven-key-input").value = "";
   document.getElementById("key-err").textContent    = "";
   document.getElementById("overlay").classList.remove("hidden");
-  log("INFO", "API Keys geloescht");
+  log("INFO", "API Key geloescht");
 };
 
 window.toggleSession = function() {

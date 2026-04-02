@@ -6,17 +6,10 @@
 export const OPENAI_STT_MODEL = "whisper-1";      // Spracherkennung (sehr gut für Kinder)
 export const OPENAI_LLM_MODEL = "gpt-4o-mini";   // Günstig & schnell & smart
 
-// ── ElevenLabs Stimme ──────────────────────────────────────
-// Auf https://elevenlabs.io/voice-library nach "child" suchen
-// Voice-ID aus der URL kopieren und hier eintragen
-export const ELEVENLABS_VOICE_ID = "7Nj1UduP6iY6hWpEDibS"; // bibi blume
-export const ELEVENLABS_MODEL = "eleven_flash_v2_5";
-export const ELEVENLABS_SETTINGS = {
-  stability:         0.55,
-  similarity_boost:  0.75,
-  style:             0.3,
-  use_speaker_boost: true,
-};
+// ── OpenAI TTS Stimme ──────────────────────────────────────
+export const OPENAI_TTS_MODEL = "tts-1";   // günstig & schnell
+export const OPENAI_TTS_VOICE = "nova";    // hellste/jüngste Stimme
+export const OPENAI_TTS_SPEED = 1.1;      // etwas lebhafter
 
 // ── Aufnahme-Einstellungen ─────────────────────────────────
 export const SILENCE_TIMEOUT_MS = 900;    // ms Stille bis Aufnahme endet
@@ -24,8 +17,7 @@ export const SILENCE_THRESHOLD  = 0.015;  // Lautstärke-Schwelle (0–1)
 export const MIN_RECORD_MS      = 400;    // Mindest-Aufnahmedauer
 
 // ── localStorage Keys ─────────────────────────────────────
-export const STORAGE_KEY_OPENAI     = "bibu_openai_key";
-export const STORAGE_KEY_ELEVENLABS = "bibu_elevenlabs_key";
+export const STORAGE_KEY_OPENAI = "bibu_openai_key";
 export const STORAGE_LOG_KEY        = "bibu_log";
 export const LOG_MAX_ENTRIES        = 500;
 

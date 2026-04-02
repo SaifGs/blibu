@@ -145,12 +145,8 @@
     <h2>Hallo Papa! 👋</h2>
     <p>Gib deine API Keys ein damit Bibu mit Luis sprechen kann.</p>
 
-    <span class="label">🤖 OpenAI API Key (Whisper + GPT)</span>
+    <span class="label">🤖 OpenAI API Key (Whisper + GPT + Stimme)</span>
     <input type="password" id="openai-key-input" placeholder="sk-..."
-      autocomplete="off" spellcheck="false"/>
-
-    <span class="label">🔊 ElevenLabs API Key (Kinderstimme)</span>
-    <input type="password" id="eleven-key-input" placeholder="..."
       autocomplete="off" spellcheck="false"
       onkeydown="if(event.key==='Enter') saveKey()"/>
 
@@ -158,8 +154,7 @@
     <div class="err" id="key-err"></div>
     <div class="hint">
       OpenAI Key: <strong>platform.openai.com</strong> → API keys<br>
-      ElevenLabs Key: <strong>elevenlabs.io</strong> → Profile → API Key<br>
-      Beide Keys werden nur lokal auf diesem Gerät gespeichert.
+      Der Key wird nur lokal auf diesem Gerät gespeichert.
     </div>
     <span class="reset-link" onclick="showResetConfirm()">Keys loeschen / aendern</span>
   </div>
