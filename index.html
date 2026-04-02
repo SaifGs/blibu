@@ -194,80 +194,41 @@
       <div class="char-ring"></div><div class="char-ring"></div><div class="char-ring"></div>
     </div>
     <svg class="bsvg" id="bsvg" viewBox="0 -14 200 274" xmlns="http://www.w3.org/2000/svg">
-
-      <!-- Hintere Füße (hinter Panzer) -->
-      <ellipse cx="70" cy="252" rx="25" ry="13" fill="#1D9E75"/>
-      <ellipse cx="70" cy="250" rx="20" ry="10" fill="#5DCAA5"/>
-      <ellipse cx="130" cy="252" rx="25" ry="13" fill="#1D9E75"/>
-      <ellipse cx="130" cy="250" rx="20" ry="10" fill="#5DCAA5"/>
-
-      <!-- Panzer Rand (dunkel) -->
-      <ellipse cx="100" cy="188" rx="80" ry="74" fill="#1D9E75"/>
-      <!-- Panzer Haupt -->
-      <ellipse cx="100" cy="185" rx="74" ry="68" fill="#5DCAA5"/>
-
-      <!-- Panzer Muster (Scutes) -->
-      <ellipse cx="100" cy="170" rx="26" ry="23" fill="none" stroke="#1D9E75" stroke-width="2.5"/>
-      <path d="M 74 150 Q 57 137 53 156" fill="none" stroke="#1D9E75" stroke-width="2" stroke-linecap="round"/>
-      <path d="M 126 150 Q 143 137 147 156" fill="none" stroke="#1D9E75" stroke-width="2" stroke-linecap="round"/>
-      <path d="M 74 174 Q 49 170 47 188" fill="none" stroke="#1D9E75" stroke-width="2" stroke-linecap="round"/>
-      <path d="M 126 174 Q 151 170 153 188" fill="none" stroke="#1D9E75" stroke-width="2" stroke-linecap="round"/>
-      <path d="M 83 193 Q 72 216 80 228" fill="none" stroke="#1D9E75" stroke-width="2" stroke-linecap="round"/>
-      <path d="M 117 193 Q 128 216 120 228" fill="none" stroke="#1D9E75" stroke-width="2" stroke-linecap="round"/>
-      <path d="M 100 193 L 100 230" fill="none" stroke="#1D9E75" stroke-width="2"/>
-
-      <!-- Plastron (Bauch) -->
-      <ellipse cx="100" cy="198" rx="38" ry="40" fill="white" opacity="0.17"/>
-
-      <!-- Vordere Flossen -->
-      <ellipse cx="27" cy="162" rx="14" ry="34" fill="#1D9E75" transform="rotate(-20 27 162)"/>
-      <ellipse cx="27" cy="162" rx="10" ry="28" fill="#5DCAA5" transform="rotate(-20 27 162)"/>
-      <ellipse cx="173" cy="162" rx="14" ry="34" fill="#1D9E75" transform="rotate(20 173 162)"/>
-      <ellipse cx="173" cy="162" rx="10" ry="28" fill="#5DCAA5" transform="rotate(20 173 162)"/>
-
-      <!-- Hals -->
-      <ellipse cx="100" cy="130" rx="30" ry="22" fill="#5DCAA5"/>
-
-      <!-- Kopf Rand -->
-      <ellipse cx="100" cy="80" rx="54" ry="52" fill="#1D9E75"/>
-      <!-- Kopf -->
+      <line x1="78" y1="36" x2="58" y2="8" stroke="#1D9E75" stroke-width="3.5" stroke-linecap="round"/>
+      <circle cx="54" cy="5" r="8" fill="#E24B4A"/>
+      <line x1="122" y1="34" x2="145" y2="8" stroke="#1D9E75" stroke-width="3.5" stroke-linecap="round"/>
+      <circle cx="149" cy="5" r="7" fill="#EF9F27"/>
+      <line x1="100" y1="28" x2="100" y2="4" stroke="#1D9E75" stroke-width="3.5" stroke-linecap="round"/>
+      <circle cx="100" cy="2" r="9" fill="#378ADD"/>
+      <ellipse cx="100" cy="185" rx="60" ry="68" fill="#5DCAA5"/>
+      <ellipse cx="100" cy="182" rx="55" ry="63" fill="#9FE1CB"/>
+      <ellipse cx="100" cy="188" rx="32" ry="38" fill="white" opacity="0.25"/>
+      <ellipse cx="100" cy="80" rx="54" ry="52" fill="#5DCAA5"/>
       <ellipse cx="100" cy="78" rx="49" ry="47" fill="#9FE1CB"/>
-
-      <!-- Augen (weiß, etwas größer = süßer) -->
-      <ellipse cx="79" cy="70" rx="20" ry="22" fill="white"/>
-      <ellipse cx="121" cy="70" rx="20" ry="22" fill="white"/>
-
-      <!-- Pupillen (Positionen bleiben für Augen-Tracking) -->
-      <ellipse id="pl" cx="81" cy="72" rx="11" ry="12" fill="#085041"/>
-      <ellipse id="pr" cx="123" cy="72" rx="11" ry="12" fill="#085041"/>
-
-      <!-- Augenglanz -->
-      <circle cx="87" cy="64" r="4.5" fill="white"/>
-      <circle cx="129" cy="64" r="4.5" fill="white"/>
-      <circle cx="77" cy="77" r="2.2" fill="white"/>
-      <circle cx="119" cy="77" r="2.2" fill="white"/>
-
-      <!-- Süße Augenbrauen -->
-      <path d="M 62 57 Q 79 47 96 57" stroke="#085041" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-      <path d="M 104 57 Q 121 47 138 57" stroke="#085041" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-
-      <!-- Wangen -->
-      <ellipse cx="56" cy="88" rx="15" ry="10" fill="#E24B4A" opacity="0.28"/>
-      <ellipse cx="144" cy="88" rx="15" ry="10" fill="#E24B4A" opacity="0.28"/>
-
-      <!-- Mund -->
-      <path id="lip-top"     d="M 82 101 Q 100 98 118 101"  fill="#085041"/>
-      <path id="lip-bot"     d="M 82 101 Q 100 108 118 101" fill="#085041"/>
-      <path id="mouth-inner" d="M 84 101 Q 100 101 116 101" fill="#3a2010"/>
-      <path id="teeth-top"   d="M 86 101 Q 100 100 114 101 L 114 105 Q 100 104 86 105 Z" fill="white" opacity="0"/>
+      <ellipse cx="79" cy="70" rx="17" ry="19" fill="white"/>
+      <ellipse cx="121" cy="70" rx="17" ry="19" fill="white"/>
+      <ellipse id="pl" cx="81" cy="72" rx="10" ry="11" fill="#085041"/>
+      <ellipse id="pr" cx="123" cy="72" rx="10" ry="11" fill="#085041"/>
+      <circle cx="85" cy="65" r="4" fill="white"/>
+      <circle cx="127" cy="65" r="4" fill="white"/>
+      <ellipse cx="60" cy="90" rx="13" ry="9" fill="#E24B4A" opacity="0.22"/>
+      <ellipse cx="140" cy="90" rx="13" ry="9" fill="#E24B4A" opacity="0.22"/>
+      <path id="lip-top"     d="M 80 101 Q 100 98 120 101"  fill="#085041"/>
+      <path id="lip-bot"     d="M 80 101 Q 100 104 120 101" fill="#085041"/>
+      <path id="mouth-inner" d="M 82 101 Q 100 101 118 101" fill="#3a2010"/>
+      <path id="teeth-top"   d="M 84 101 Q 100 100 116 101 L 116 105 Q 100 104 84 105 Z" fill="white" opacity="0"/>
       <ellipse id="tongue"   cx="100" cy="112" rx="12" ry="5" fill="#E24B4A" opacity="0"/>
-
-      <!-- Schlaf-Augen (ganz oben, überdecken Augen) -->
-      <ellipse class="eyelid" cx="79"  cy="70" rx="21" ry="23" fill="#9FE1CB"/>
-      <ellipse class="eyelid" cx="121" cy="70" rx="21" ry="23" fill="#9FE1CB"/>
-      <path class="eyelid" d="M 61 70 Q 79 82 97 70"  stroke="#085041" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-      <path class="eyelid" d="M 103 70 Q 121 82 139 70" stroke="#085041" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-
+      <ellipse cx="42" cy="152" rx="13" ry="33" fill="#5DCAA5" transform="rotate(-18 42 152)"/>
+      <ellipse cx="158" cy="152" rx="13" ry="33" fill="#5DCAA5" transform="rotate(18 158 152)"/>
+      <ellipse cx="78" cy="242" rx="17" ry="21" fill="#1D9E75"/>
+      <ellipse cx="122" cy="242" rx="17" ry="21" fill="#1D9E75"/>
+      <ellipse cx="76" cy="257" rx="21" ry="10" fill="#085041"/>
+      <ellipse cx="124" cy="257" rx="21" ry="10" fill="#085041"/>
+      <!-- Schlaf-Augen (geschlossen) -->
+      <ellipse class="eyelid" cx="79"  cy="70" rx="18" ry="20" fill="#9FE1CB"/>
+      <ellipse class="eyelid" cx="121" cy="70" rx="18" ry="20" fill="#9FE1CB"/>
+      <path class="eyelid" d="M 62 70 Q 79 80 96 70"  stroke="#085041" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <path class="eyelid" d="M 104 70 Q 121 80 138 70" stroke="#085041" stroke-width="2.5" fill="none" stroke-linecap="round"/>
     </svg>
     <div class="zzz-wrap" id="zzz-wrap">
       <span class="z z1">z</span><span class="z z2">Z</span><span class="z z3">z</span>
