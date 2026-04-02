@@ -80,8 +80,6 @@ export async function startSession(keys) {
   sessionActive = true;
   conversationHistory = [];
 
-  setMicState("connected");
-  setStatus("Luis kann sprechen!");
   setAnim("");
 
   // Begrüßung
