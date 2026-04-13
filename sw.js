@@ -1,5 +1,5 @@
 // Bibu Service Worker — ermöglicht PWA-Installation
-const CACHE = 'bibu-v1';
+const CACHE = 'bibu-v2';
 const FILES = [
   './',
   './index.html',
@@ -11,6 +11,7 @@ const FILES = [
   './log.js',
   './manifest.json',
   './icon-192.png',
+  './icon-512.png',
 ];
 
 self.addEventListener('install', e => {
