@@ -95,6 +95,14 @@ document.addEventListener("webkitfullscreenchange", () => { if (!document.webkit
 
 window.addEventListener("load", () => {
   log("INFO", "Seite geladen");
+
+  // Service Worker registrieren (PWA-Installation auf Android)
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("./sw.js")
+      .then(() => log("INFO", "Service Worker registriert"))
+      .catch(e => log("ERROR", "Service Worker Fehler: " + e.message));
+  }
+
   if (loadKeys()) {
     document.getElementById("overlay").classList.add("hidden");
     initApp();
