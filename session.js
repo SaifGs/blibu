@@ -217,7 +217,7 @@ async function onRecordingStop() {
     // 2. Schlaf-Befehl? → Session beenden (stopSession sagt selbst Tschüss)
     if (isSleepCommand(transcript)) {
       log("INFO", "Schlaf-Befehl erkannt — Session wird beendet");
-      stopSession();
+      await stopSession();
       return;
     }
 
@@ -366,8 +366,9 @@ async function blibRespond(userMessage) {
     setMicState("connected");
     if (netErr) showError("Keine Internetverbindung");
     setTimeout(() => {
+      if (!sessionActive) return;
       setAnim("");
-      if (sessionActive) waitForSpeech();
+      waitForSpeech();
     }, 900);
   }
 }
