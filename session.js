@@ -37,9 +37,10 @@ let recorder        = null;
 let audioChunks     = [];
 let recordingStart  = 0;
 let silenceTimer    = null;
-let isRecording     = false;
+let isRecording      = false;
 let recorderMimeType = "audio/webm";
-let currentAudio    = null;
+let currentAudio     = null;
+let resolvePendingAudio = null; // damit laufende playAudio-Promises sauber beendet werden
 let conversationHistory = [];
 
 // ── Session starten ───────────────────────────────────────
@@ -317,20 +318,22 @@ async function blibRespond(userMessage) {
   let netErr = false;
 
   try {
-    const reply    = await askGPT(userMessage, userMessage === "__greeting__" ? 60 : 300);
+    const reply = await askGPT(userMessage, userMessage === "__greeting__" ? 60 : 300);
+    if (!sessionActive) return; // Session wurde während GPT beendet
+
     log("BLIBU", `"${reply}"`);
 
     const audioUrl = await speakWithOpenAI(reply);
+    if (!sessionActive) { URL.revokeObjectURL(audioUrl); return; } // Session wurde während TTS beendet
 
     setMicState("blibu-talking");
-
     startMouthAnim();
     setAnim("");
 
     await playAudio(audioUrl);
 
   } catch (err) {
-    if (!navigator.onLine || err instanceof TypeError) {
+    if (!navigator.onLine) {
       log("ERROR", "Keine Internetverbindung");
       netErr = true;
     } else {
@@ -339,6 +342,7 @@ async function blibRespond(userMessage) {
   } finally {
     blibSpeaking = false;
     stopMouthAnim();
+    if (!sessionActive) return; // stopSession hat den UI-Zustand bereits gesetzt
     setAnim("happy");
     setMicState("connected");
     if (netErr) showError("Keine Internetverbindung");
@@ -350,18 +354,28 @@ async function blibRespond(userMessage) {
 }
 
 // ── Audio abspielen ───────────────────────────────────────
-// Wiederverwendet das in startSession entsperrte Audio-Element (iOS-Fix)
+// Wiederverwendet das in startSession entsperrte Audio-Element (iOS-Fix).
+// Löst ein laufendes playAudio-Promise auf bevor ein neues startet —
+// verhindert dass blibRespond ewig hängt wenn stopSession dazwischenkommt.
 function playAudio(url) {
   return new Promise((resolve) => {
+    // Hängendes Promise (z.B. von vorheriger Antwort) sauber beenden
+    if (resolvePendingAudio) { resolvePendingAudio(); resolvePendingAudio = null; }
+
+    if (!currentAudio) { URL.revokeObjectURL(url); resolve(); return; }
+
+    resolvePendingAudio = resolve;
+
+    const done = () => { URL.revokeObjectURL(url); resolvePendingAudio = null; resolve(); };
+
     currentAudio.pause();
     currentAudio.src = url;
     currentAudio.load(); // iOS: src-Wechsel braucht explizites load() vor play()
-    currentAudio.onended = () => { URL.revokeObjectURL(url); resolve(); };
-    currentAudio.onerror = (e) => { log("ERROR", "Audio Ladefehler: " + (e.message || JSON.stringify(e))); URL.revokeObjectURL(url); resolve(); };
+    currentAudio.onended = done;
+    currentAudio.onerror = (e) => { log("ERROR", "Audio Ladefehler: " + (e.message || JSON.stringify(e))); done(); };
     currentAudio.play().catch((err) => {
       log("ERROR", "Audio play() fehlgeschlagen: " + err.message);
-      URL.revokeObjectURL(url);
-      resolve();
+      done();
     });
   });
 }
