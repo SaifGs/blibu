@@ -181,6 +181,19 @@ function stopRecording() {
   recorder.stop();
 }
 
+// ── Schlaf-Erkennung ──────────────────────────────────────
+const SLEEP_TRIGGERS = [
+  "geh schlafen", "gehe schlafen", "geh jetzt schlafen",
+  "gute nacht", "schlaf jetzt", "schlafe jetzt",
+  "tschüss bibu", "tschuess bibu", "auf wiedersehen",
+  "bis morgen", "mach's gut", "machs gut",
+];
+
+function isSleepCommand(text) {
+  const t = text.toLowerCase().trim();
+  return SLEEP_TRIGGERS.some(trigger => t.includes(trigger));
+}
+
 // ── Aufnahme verarbeiten ──────────────────────────────────
 async function onRecordingStop() {
   if (!sessionActive) return;
@@ -190,7 +203,6 @@ async function onRecordingStop() {
 
   setAnim("thinking");
   setMicState("connected");
-
 
   try {
     // 1. Whisper STT
@@ -202,7 +214,14 @@ async function onRecordingStop() {
     }
     log("LUIS", `"${transcript}"`);
 
-    // 2. GPT-4o-mini + ElevenLabs
+    // 2. Schlaf-Befehl? → Session beenden (stopSession sagt selbst Tschüss)
+    if (isSleepCommand(transcript)) {
+      log("INFO", "Schlaf-Befehl erkannt — Session wird beendet");
+      stopSession();
+      return;
+    }
+
+    // 3. Normale Antwort
     await blibRespond(transcript);
 
   } catch (err) {
