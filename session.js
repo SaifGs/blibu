@@ -6,7 +6,7 @@
 //   2. Silence-Detektion erkennt wann Luis fertig ist
 //   3. Whisper (OpenAI) transkribiert das Audio
 //   4. GPT-4o-mini generiert Bibu's Antwort
-//   5. ElevenLabs spricht die Antwort mit Kinderstimme
+//   5. OpenAI TTS spricht die Antwort
 // ══════════════════════════════════════════════════════════
 
 import {
@@ -22,7 +22,7 @@ import {
 } from "./config.js";
 import { log } from "./log.js";
 import { startMouthAnim, stopMouthAnim } from "./mouth.js";
-import { setAnim, setMicState, setStatus, showError } from "./ui.js";
+import { setAnim, setMicState, showError } from "./ui.js";
 
 // ── State ─────────────────────────────────────────────────
 export let sessionActive = false;
@@ -38,6 +38,7 @@ let audioChunks     = [];
 let recordingStart  = 0;
 let silenceTimer    = null;
 let isRecording     = false;
+let recorderMimeType = "audio/webm";
 let currentAudio    = null;
 let conversationHistory = [];
 
@@ -48,7 +49,7 @@ export async function startSession(keys) {
   openaiKey = keys.openai;
 
   log("INFO", "Session startet (Whisper + GPT-4o-mini + ElevenLabs)...");
-  setStatus("Verbinde...");
+
   setAnim("thinking");
 
   try {
@@ -56,7 +57,7 @@ export async function startSession(keys) {
     log("INFO", "Mikrofon aktiv");
   } catch (e) {
     log("ERROR", "Mikrofon verweigert: " + e.message);
-    setStatus("Mikrofon erlauben!");
+
     setAnim("");
     return;
   }
@@ -92,28 +93,21 @@ function waitForSpeech() {
   if (!sessionActive || blibSpeaking) return;
 
   const buffer = new Float32Array(analyser.fftSize);
-  let speechDetected = false;
 
-  setStatus("Luis kann sprechen!");
   setMicState("connected");
   setAnim("");
 
-  function checkLevel() {
-    if (!sessionActive || blibSpeaking) return;
+  const interval = setInterval(() => {
+    if (!sessionActive || blibSpeaking || isRecording) { clearInterval(interval); return; }
 
     analyser.getFloatTimeDomainData(buffer);
     const rms = Math.sqrt(buffer.reduce((s, v) => s + v * v, 0) / buffer.length);
 
-    if (rms > SILENCE_THRESHOLD && !speechDetected && !isRecording) {
-      // Luis fängt an zu sprechen
-      speechDetected = true;
+    if (rms > SILENCE_THRESHOLD) {
+      clearInterval(interval);
       startRecording();
-    } else if (!speechDetected) {
-      requestAnimationFrame(checkLevel);
     }
-  }
-
-  requestAnimationFrame(checkLevel);
+  }, 50);
 }
 
 // ── Aufnahme starten ──────────────────────────────────────
@@ -127,7 +121,7 @@ function startRecording() {
   log("LUIS", "Luis spricht...");
   setAnim("listening");
   setMicState("user-talking");
-  setStatus("Luis spricht...");
+
 
   // MediaRecorder: webm für alle, mp4 als iOS-Fallback
   const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
@@ -137,6 +131,7 @@ function startRecording() {
       : "";
 
   recorder = new MediaRecorder(mediaStream, mimeType ? { mimeType } : {});
+  recorderMimeType = recorder.mimeType || "audio/webm";
   recorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunks.push(e.data); };
   recorder.onstop = onRecordingStop;
   recorder.start(100); // alle 100ms ein Chunk
@@ -149,30 +144,22 @@ function startRecording() {
 function monitorSilence() {
   const buffer = new Float32Array(analyser.fftSize);
 
-  function check() {
-    if (!isRecording) return;
+  const interval = setInterval(() => {
+    if (!isRecording) { clearInterval(interval); return; }
 
     analyser.getFloatTimeDomainData(buffer);
     const rms = Math.sqrt(buffer.reduce((s, v) => s + v * v, 0) / buffer.length);
 
     if (rms < SILENCE_THRESHOLD) {
-      // Stille erkannt — Timer starten
       if (!silenceTimer) {
         silenceTimer = setTimeout(() => {
           if (isRecording) stopRecording();
         }, SILENCE_TIMEOUT_MS);
       }
     } else {
-      // Luis spricht noch — Timer zurücksetzen
-      if (silenceTimer) {
-        clearTimeout(silenceTimer);
-        silenceTimer = null;
-      }
+      if (silenceTimer) { clearTimeout(silenceTimer); silenceTimer = null; }
     }
-    requestAnimationFrame(check);
-  }
-
-  requestAnimationFrame(check);
+  }, 50);
 }
 
 function stopRecording() {
@@ -197,12 +184,12 @@ function stopRecording() {
 async function onRecordingStop() {
   if (!sessionActive) return;
 
-  const blob = new Blob(audioChunks, { type: "audio/webm" });
+  const blob = new Blob(audioChunks, { type: recorderMimeType });
   audioChunks = [];
 
   setAnim("thinking");
   setMicState("connected");
-  setStatus("Bibu denkt...");
+
 
   try {
     // 1. Whisper STT
@@ -336,7 +323,7 @@ async function blibRespond(userMessage) {
     const audioUrl = await speakWithOpenAI(reply);
 
     setMicState("blibu-talking");
-    setStatus("");
+
     startMouthAnim();
     setAnim("");
 
@@ -413,7 +400,7 @@ export async function stopSession() {
 
   setAnim("schlaf");
   setMicState("idle");
-  setStatus("Tippen zum Starten");
+
 
   log("INFO", "Session beendet");
 }

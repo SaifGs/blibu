@@ -1,6 +1,17 @@
 // Bibu Service Worker — ermöglicht PWA-Installation
 const CACHE = 'bibu-v1';
-const FILES = ['./blibu.html', './manifest.json'];
+const FILES = [
+  './',
+  './index.html',
+  './main.js',
+  './session.js',
+  './config.js',
+  './ui.js',
+  './mouth.js',
+  './log.js',
+  './manifest.json',
+  './icon-192.png',
+];
 
 self.addEventListener('install', e => {
   e.waitUntil(
@@ -19,8 +30,8 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  // API-Calls immer live (nicht cachen)
-  if (e.request.url.includes('anthropic.com') || e.request.url.includes('fonts.googleapis')) {
+  // API-Calls und Fonts immer live (nicht cachen)
+  if (e.request.url.includes('openai.com') || e.request.url.includes('fonts.googleapis')) {
     return;
   }
   e.respondWith(

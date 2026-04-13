@@ -71,7 +71,6 @@ export function setMicState(state) {
   }
 }
 
-export function setStatus(_text) {}
 
 // ── Fehlermeldung kurz anzeigen ───────────────────────────
 let errorTimer = null;
