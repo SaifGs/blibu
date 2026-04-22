@@ -2,23 +2,25 @@
 // main.js — App-Einstiegspunkt
 // ══════════════════════════════════════════════════════════
 
-import { STORAGE_KEY_OPENAI }                                    from "./config.js";
+import { STORAGE_KEY_OPENAI, STORAGE_KEY_ELEVENLABS }            from "./config.js";
 import { log, showLog, closeLog, setFilter, clearLog, copyLog }  from "./log.js";
 import { startSession, stopSession, charTap, sessionActive }     from "./session.js";
 import { setAnim }                                               from "./ui.js";
 
-let keys = { openai: "" };
+let keys = { openai: "", eleven: "" };
 
 function loadKeys() {
   try {
     const o = localStorage.getItem(STORAGE_KEY_OPENAI);
-    if (o) {
+    const e = localStorage.getItem(STORAGE_KEY_ELEVENLABS);
+    if (o && e) {
       keys.openai = atob(o);
-      log("INFO", "API Key geladen");
+      keys.eleven = atob(e);
+      log("INFO", "API Keys geladen");
       return true;
     }
   } catch(err) {
-    log("ERROR", "Key laden: " + err.message);
+    log("ERROR", "Keys laden: " + err.message);
   }
   return false;
 }
@@ -27,35 +29,45 @@ function loadKeys() {
 
 window.saveKey = function() {
   const openaiInput = document.getElementById("openai-key-input");
+  const elevenInput = document.getElementById("eleven-key-input");
   const err         = document.getElementById("key-err");
 
   const oVal = openaiInput.value.trim();
+  const eVal = elevenInput.value.trim();
 
   if (!oVal.startsWith("sk-")) {
     err.textContent = "OpenAI Key muss mit sk- beginnen";
     return;
   }
+  if (!eVal || eVal.length < 10) {
+    err.textContent = "ElevenLabs Key eingeben";
+    return;
+  }
 
   try {
-    localStorage.setItem(STORAGE_KEY_OPENAI, btoa(oVal));
+    localStorage.setItem(STORAGE_KEY_OPENAI,     btoa(oVal));
+    localStorage.setItem(STORAGE_KEY_ELEVENLABS, btoa(eVal));
     keys.openai = oVal;
-    log("INFO", "API Key gespeichert");
+    keys.eleven = eVal;
+    log("INFO", "API Keys gespeichert");
     document.getElementById("overlay").classList.add("hidden");
     setTimeout(initApp, 300);
   } catch(e) {
     err.textContent = "Speichern fehlgeschlagen: " + e.message;
-    log("ERROR", "Key speichern: " + e.message);
+    log("ERROR", "Keys speichern: " + e.message);
   }
 };
 
 window.showResetConfirm = function() {
-  if (!confirm("API Key wirklich loeschen?")) return;
+  if (!confirm("API Keys wirklich loeschen?")) return;
   localStorage.removeItem(STORAGE_KEY_OPENAI);
-  keys = { openai: "" };
+  localStorage.removeItem(STORAGE_KEY_ELEVENLABS);
+  keys = { openai: "", eleven: "" };
   document.getElementById("openai-key-input").value = "";
+  document.getElementById("eleven-key-input").value = "";
   document.getElementById("key-err").textContent    = "";
   document.getElementById("overlay").classList.remove("hidden");
-  log("INFO", "API Key geloescht");
+  log("INFO", "API Keys geloescht");
 };
 
 window.toggleSession = function() {
@@ -76,6 +88,26 @@ window.copyLog   = copyLog;
 function initApp() {
   log("INFO", "Bibu gestartet — " + new Date().toLocaleString("de-AT"));
   setAnim("schlaf");
+
+  // Log-Viewer: Long-Press (900ms) auf Sleep-Button öffnet Log (versteckt für Papa)
+  const sleepBtn = document.getElementById("sleep-btn");
+  let pressTimer = null;
+  let longPressed = false;
+  const startPress = () => {
+    longPressed = false;
+    pressTimer = setTimeout(() => { longPressed = true; showLog(); }, 900);
+  };
+  const cancelPress = () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } };
+  sleepBtn.addEventListener("touchstart", startPress, { passive: true });
+  sleepBtn.addEventListener("touchend",   cancelPress);
+  sleepBtn.addEventListener("touchcancel", cancelPress);
+  sleepBtn.addEventListener("mousedown",  startPress);
+  sleepBtn.addEventListener("mouseup",    cancelPress);
+  sleepBtn.addEventListener("mouseleave", cancelPress);
+  // Normalen Klick unterdrücken, wenn Long-Press ausgelöst wurde
+  sleepBtn.addEventListener("click", (e) => {
+    if (longPressed) { e.stopImmediatePropagation(); e.preventDefault(); longPressed = false; }
+  }, true);
 }
 
 // ── Vollbild ──────────────────────────────────────────────

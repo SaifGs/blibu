@@ -1,5 +1,5 @@
 // Bibu Service Worker — ermöglicht PWA-Installation
-const CACHE = 'bibu-v2';
+const CACHE = 'bibu-v3';
 const FILES = [
   './',
   './index.html',
@@ -31,8 +31,15 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  // API-Calls und Fonts immer live (nicht cachen)
-  if (e.request.url.includes('openai.com') || e.request.url.includes('fonts.googleapis')) {
+  // Nur GET cachen. API-Calls (OpenAI, ElevenLabs) und Fonts immer live durchreichen.
+  const url = e.request.url;
+  if (
+    e.request.method !== 'GET' ||
+    url.includes('openai.com') ||
+    url.includes('elevenlabs.io') ||
+    url.includes('fonts.googleapis') ||
+    url.includes('fonts.gstatic')
+  ) {
     return;
   }
   e.respondWith(

@@ -12,9 +12,9 @@
 import {
   OPENAI_STT_MODEL,
   OPENAI_LLM_MODEL,
-  OPENAI_TTS_MODEL,
-  OPENAI_TTS_VOICE,
-  OPENAI_TTS_SPEED,
+  ELEVENLABS_VOICE_ID,
+  ELEVENLABS_MODEL,
+  ELEVENLABS_SETTINGS,
   SILENCE_TIMEOUT_MS,
   SILENCE_THRESHOLD,
   MIN_RECORD_MS,
@@ -28,7 +28,8 @@ import { setAnim, setMicState, showError } from "./ui.js";
 export let sessionActive = false;
 export let blibSpeaking  = false;
 
-let openaiKey = "";
+let openaiKey  = "";
+let elevenKey  = "";
 
 let mediaStream     = null;
 let audioContext    = null;
@@ -48,6 +49,7 @@ export async function startSession(keys) {
   if (sessionActive) return;
 
   openaiKey = keys.openai;
+  elevenKey = keys.eleven;
 
   log("INFO", "Session startet (Whisper + GPT-4o-mini + ElevenLabs)...");
 
@@ -263,16 +265,21 @@ async function transcribeWithWhisper(blob) {
 
 // ── GPT-4o-mini ───────────────────────────────────────────
 async function askGPT(userMessage, maxTokens = 300) {
-  // Sonderfall: Begrüßung / Abschied
-  const message = userMessage === "__greeting__"
+  const isGreeting = userMessage === "__greeting__";
+  const message = isGreeting
     ? "Begrüße Luis in 1-2 kurzen Sätzen!"
     : userMessage;
 
-  conversationHistory.push({ role: "user", content: message });
+  // Greeting-Prompt nur für diese eine Anfrage, nicht in History speichern
+  const historyForApi = isGreeting
+    ? [...conversationHistory, { role: "user", content: message }]
+    : (conversationHistory.push({ role: "user", content: message }), conversationHistory);
 
-  // Maximal 10 Nachrichten im Verlauf behalten
+  // Maximal 10 Nachrichten im Verlauf behalten — in Paaren schneiden,
+  // damit die History nicht mit einem 'assistant'-Turn beginnt.
   if (conversationHistory.length > 10) {
-    conversationHistory = conversationHistory.slice(-10);
+    const drop = conversationHistory.length - 10;
+    conversationHistory = conversationHistory.slice(drop + (drop % 2));
   }
 
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -287,7 +294,7 @@ async function askGPT(userMessage, maxTokens = 300) {
       temperature: 0.9,
       messages: [
         { role: "system", content: PERSONA },
-        ...conversationHistory,
+        ...historyForApi,
       ],
     }),
   });
@@ -300,29 +307,32 @@ async function askGPT(userMessage, maxTokens = 300) {
   const data  = await res.json();
   const reply = data.choices[0]?.message?.content?.trim() || "Wubbeldiwupp!";
 
-  conversationHistory.push({ role: "assistant", content: reply });
+  // Assistant-Turn nur speichern, wenn auch der User-Turn gespeichert wurde (kein Greeting)
+  if (!isGreeting) conversationHistory.push({ role: "assistant", content: reply });
   return reply;
 }
 
-// ── OpenAI TTS ────────────────────────────────────────────
-async function speakWithOpenAI(text) {
-  const res = await fetch("https://api.openai.com/v1/audio/speech", {
-    method: "POST",
-    headers: {
-      Authorization:  `Bearer ${openaiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: OPENAI_TTS_MODEL,
-      input: text,
-      voice: OPENAI_TTS_VOICE,
-      speed: OPENAI_TTS_SPEED,
-    }),
-  });
+// ── ElevenLabs TTS ────────────────────────────────────────
+async function speakWithElevenLabs(text) {
+  const res = await fetch(
+    `https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}/stream`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "xi-api-key":   elevenKey,
+      },
+      body: JSON.stringify({
+        text,
+        model_id:       ELEVENLABS_MODEL,
+        voice_settings: ELEVENLABS_SETTINGS,
+      }),
+    }
+  );
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(`OpenAI TTS Fehler: ${res.status} — ${err.error?.message || ""}`);
+    throw new Error(`ElevenLabs Fehler: ${res.status} — ${err.detail?.message || ""}`);
   }
 
   const blob = await res.blob();
@@ -335,14 +345,15 @@ async function blibRespond(userMessage) {
 
   blibSpeaking = true;
   let netErr = false;
+  let apiErr = false;
 
   try {
-    const reply = await askGPT(userMessage, userMessage === "__greeting__" ? 60 : 300);
+    const reply = await askGPT(userMessage, userMessage === "__greeting__" ? 100 : 300);
     if (!sessionActive) return; // Session wurde während GPT beendet
 
     log("BLIBU", `"${reply}"`);
 
-    const audioUrl = await speakWithOpenAI(reply);
+    const audioUrl = await speakWithElevenLabs(reply);
     if (!sessionActive) { URL.revokeObjectURL(audioUrl); return; } // Session wurde während TTS beendet
 
     setMicState("blibu-talking");
@@ -357,14 +368,18 @@ async function blibRespond(userMessage) {
       netErr = true;
     } else {
       log("ERROR", "Antwort fehlgeschlagen: " + err.message);
+      apiErr = true;
     }
   } finally {
+    // Wenn stopSession mitten im Flow aufgerufen wurde, besitzt stopSession jetzt
+    // blibSpeaking + Mund-Animation für den Abschieds-Sound — nicht überschreiben.
+    if (!sessionActive) return;
     blibSpeaking = false;
     stopMouthAnim();
-    if (!sessionActive) return; // stopSession hat den UI-Zustand bereits gesetzt
     setAnim("happy");
     setMicState("connected");
-    if (netErr) showError("Keine Internetverbindung");
+    if (netErr)      showError("Keine Internetverbindung");
+    else if (apiErr) showError("Uups, ich war kurz abgelenkt!");
     setTimeout(() => {
       if (!sessionActive) return;
       setAnim("");
@@ -414,7 +429,7 @@ export async function stopSession() {
 
   // Sofortiger Abschied — kein GPT, fixer Text
   try {
-    const audioUrl = await speakWithOpenAI("OK, ich gehe schlafen. Tschüss Luis!");
+    const audioUrl = await speakWithElevenLabs("OK, ich gehe schlafen. Tschüss Luis!");
     log("BIBU", '"OK, ich gehe schlafen. Tschüss Luis!"');
     setMicState("blibu-talking");
     startMouthAnim();
