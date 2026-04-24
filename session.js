@@ -441,7 +441,7 @@ export async function stopSession() {
 
   blibSpeaking = false;
   stopMouthAnim();
-  if (currentAudio) { currentAudio.pause(); currentAudio.src = ""; currentAudio = null; }
+  if (currentAudio) { currentAudio.onended = null; currentAudio.onerror = null; currentAudio.pause(); currentAudio = null; }
   if (audioContext) { audioContext.close(); audioContext = null; }
   if (mediaStream)  { mediaStream.getTracks().forEach(t => t.stop()); mediaStream = null; }
 
