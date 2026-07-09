@@ -124,6 +124,29 @@ async function getConversationToken(agentId) {
   return data.token;
 }
 
+// ── Bildschirm wachhalten ─────────────────────────────────
+// Android schaltet das Display sonst mitten im Gespräch ab und
+// beendet damit die Session. iOS ab 16.4 kann das auch.
+let wakeLock = null;
+
+async function acquireWakeLock() {
+  if (!("wakeLock" in navigator)) return;
+  try {
+    wakeLock = await navigator.wakeLock.request("screen");
+  } catch (e) {
+    log("WARN", "WakeLock nicht möglich: " + e.message);
+  }
+}
+
+function releaseWakeLock() {
+  if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
+}
+
+// Beim Zurückkehren in die App ist der WakeLock immer weg → neu holen
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && sessionActive) acquireWakeLock();
+});
+
 // ── Session starten ───────────────────────────────────────
 export async function startSession(keys) {
   if (sessionActive) return;
@@ -210,6 +233,7 @@ export async function startSession(keys) {
 
     sessionActive = true;
     startVolumeWatch();
+    acquireWakeLock();
 
   } catch (err) {
     conversation = null;
@@ -316,6 +340,7 @@ function cleanupSession() {
   sessionActive = false;
   blibSpeaking  = false;
   stopVolumeWatch();
+  releaseWakeLock();
   stopMouthAnim();
   conversation = null;
   setAnim("schlaf");
@@ -330,6 +355,7 @@ export async function stopSession() {
 
   sessionActive = false;
   stopVolumeWatch();
+  releaseWakeLock();
 
   if (conversation) {
     try { await conversation.endSession(); } catch (e) { /* Verbindung ggf. schon weg */ }
