@@ -1,5 +1,5 @@
 // Bibu Service Worker — ermöglicht PWA-Installation
-const CACHE = 'bibu-v4';
+const CACHE = 'bibu-v5';
 const FILES = [
   './',
   './index.html',

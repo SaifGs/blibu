@@ -3,8 +3,8 @@
 //
 // Ablauf:
 //   1. Agent bei ElevenLabs anlegen/aktualisieren (Persona + Stimme aus config.js)
-//   2. Signed URL für den privaten Agent holen
-//   3. Live-Session über das ElevenLabs SDK (WebSocket, Speech-to-Speech)
+//   2. Conversation-Token für den privaten Agent holen
+//   3. Live-Session über das ElevenLabs SDK (WebRTC, Speech-to-Speech)
 //      — Turn-Taking, Unterbrechungen und Audio macht das SDK
 //   4. Transkripte kommen als Events rein (Log + Schlaf-Befehl-Erkennung)
 // ══════════════════════════════════════════════════════════
@@ -119,9 +119,9 @@ async function ensureAgent() {
   return agentId;
 }
 
-async function getSignedUrl(agentId) {
-  const data = await elApi(`/v1/convai/conversation/get-signed-url?agent_id=${agentId}`, "GET");
-  return data.signed_url;
+async function getConversationToken(agentId) {
+  const data = await elApi(`/v1/convai/conversation/token?agent_id=${agentId}`, "GET");
+  return data.token;
 }
 
 // ── Session starten ───────────────────────────────────────
@@ -151,14 +151,17 @@ export async function startSession(keys) {
   currentAudio.pause();
 
   try {
-    const agentId   = await ensureAgent();
-    const signedUrl = await getSignedUrl(agentId);
+    const agentId = await ensureAgent();
+    const conversationToken = await getConversationToken(agentId);
 
     const { Conversation } = await import(ELEVENLABS_SDK_URL);
 
+    // WebRTC statt WebSocket: iOS behandelt das wie einen Telefonanruf —
+    // Ausgabe geht auf Kopfhörer statt Lautsprecher, Lautstärketasten wirken,
+    // Echo-Unterdrückung ist besser.
     conversation = await Conversation.startSession({
-      signedUrl,
-      connectionType: "websocket",
+      conversationToken,
+      connectionType: "webrtc",
 
       onConnect: () => {
         log("INFO", "Live-Verbindung steht");
