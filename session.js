@@ -1,23 +1,26 @@
 // ══════════════════════════════════════════════════════════
-// session.js — Gesprächs-Engine
+// session.js — Gesprächs-Engine (ElevenLabs Agents, Live)
 //
 // Ablauf:
-//   1. MediaRecorder nimmt Luis' Stimme auf
-//   2. Silence-Detektion erkennt wann Luis fertig ist
-//   3. Whisper (OpenAI) transkribiert das Audio
-//   4. GPT-4o-mini generiert Bibu's Antwort
-//   5. OpenAI TTS spricht die Antwort
+//   1. Agent bei ElevenLabs anlegen/aktualisieren (Persona + Stimme aus config.js)
+//   2. Signed URL für den privaten Agent holen
+//   3. Live-Session über das ElevenLabs SDK (WebSocket, Speech-to-Speech)
+//      — Turn-Taking, Unterbrechungen und Audio macht das SDK
+//   4. Transkripte kommen als Events rein (Log + Schlaf-Befehl-Erkennung)
 // ══════════════════════════════════════════════════════════
 
 import {
-  OPENAI_STT_MODEL,
-  OPENAI_LLM_MODEL,
+  ELEVENLABS_SDK_URL,
+  AGENT_NAME,
+  AGENT_LLM,
+  AGENT_LANGUAGE,
+  FIRST_MESSAGE,
   ELEVENLABS_VOICE_ID,
   ELEVENLABS_MODEL,
   ELEVENLABS_SETTINGS,
-  SILENCE_TIMEOUT_MS,
-  SILENCE_THRESHOLD,
-  MIN_RECORD_MS,
+  VOICE_THRESHOLD,
+  STORAGE_KEY_AGENT_ID,
+  STORAGE_KEY_AGENT_HASH,
   PERSONA,
 } from "./config.js";
 import { log } from "./log.js";
@@ -28,159 +31,223 @@ import { setAnim, setMicState, showError } from "./ui.js";
 export let sessionActive = false;
 export let blibSpeaking  = false;
 
-let openaiKey  = "";
-let elevenKey  = "";
+let elevenKey    = "";
+let conversation = null;   // ElevenLabs SDK Session
+let stopping     = false;  // stopSession läuft — onDisconnect nicht doppelt behandeln
+let volumeTimer  = null;   // Poll für "Luis spricht"-Anzeige
+let currentAudio = null;   // eigenes Audio-Element für den Abschieds-Sound (iOS-Unlock)
 
-let mediaStream     = null;
-let audioContext    = null;
-let analyser        = null;
-let recorder        = null;
-let audioChunks     = [];
-let recordingStart  = 0;
-let silenceTimer    = null;
-let isRecording      = false;
-let recorderMimeType = "audio/webm";
-let currentAudio     = null;
-let resolvePendingAudio = null; // damit laufende playAudio-Promises sauber beendet werden
-let conversationHistory = [];
+// ── Agent-Konfiguration ───────────────────────────────────
+// Wird bei ElevenLabs hinterlegt. Ändert sich config.js (Persona, Stimme, ...),
+// erkennt der Hash das und der Agent wird automatisch aktualisiert.
+function agentConfigBody() {
+  return {
+    name: AGENT_NAME,
+    conversation_config: {
+      agent: {
+        language:      AGENT_LANGUAGE,
+        first_message: FIRST_MESSAGE,
+        prompt: {
+          prompt:      PERSONA,
+          llm:         AGENT_LLM,
+          temperature: 0.9,
+        },
+      },
+      tts: {
+        voice_id:         ELEVENLABS_VOICE_ID,
+        model_id:         ELEVENLABS_MODEL,
+        stability:        ELEVENLABS_SETTINGS.stability,
+        similarity_boost: ELEVENLABS_SETTINGS.similarity_boost,
+      },
+    },
+  };
+}
+
+function configHash(body) {
+  const s = JSON.stringify(body);
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+  return String(h);
+}
+
+async function elApi(path, method, body) {
+  const res = await fetch(`https://api.elevenlabs.io${path}`, {
+    method,
+    headers: {
+      "xi-api-key": elevenKey,
+      ...(body ? { "Content-Type": "application/json" } : {}),
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    const msg = err.detail?.message || err.detail?.[0]?.msg || JSON.stringify(err.detail || err);
+    throw new Error(`ElevenLabs ${method} ${path}: ${res.status} — ${msg}`);
+  }
+  return res.json();
+}
+
+// ── Agent anlegen oder aktualisieren ──────────────────────
+async function ensureAgent() {
+  const body = agentConfigBody();
+  const hash = configHash(body);
+
+  let agentId = localStorage.getItem(STORAGE_KEY_AGENT_ID);
+
+  if (agentId && localStorage.getItem(STORAGE_KEY_AGENT_HASH) === hash) {
+    return agentId; // unverändert
+  }
+
+  if (agentId) {
+    log("INFO", "Agent-Konfiguration geändert — aktualisiere Agent...");
+    try {
+      await elApi(`/v1/convai/agents/${agentId}`, "PATCH", body);
+      localStorage.setItem(STORAGE_KEY_AGENT_HASH, hash);
+      return agentId;
+    } catch (e) {
+      // Agent existiert nicht mehr (z.B. im Dashboard gelöscht) → neu anlegen
+      log("WARN", "Agent-Update fehlgeschlagen, lege neu an: " + e.message);
+    }
+  }
+
+  log("INFO", "Lege Bibu-Agent bei ElevenLabs an...");
+  const data = await elApi("/v1/convai/agents/create", "POST", body);
+  agentId = data.agent_id;
+  localStorage.setItem(STORAGE_KEY_AGENT_ID, agentId);
+  localStorage.setItem(STORAGE_KEY_AGENT_HASH, hash);
+  log("INFO", "Agent angelegt: " + agentId);
+  return agentId;
+}
+
+async function getSignedUrl(agentId) {
+  const data = await elApi(`/v1/convai/conversation/get-signed-url?agent_id=${agentId}`, "GET");
+  return data.signed_url;
+}
 
 // ── Session starten ───────────────────────────────────────
 export async function startSession(keys) {
   if (sessionActive) return;
 
-  openaiKey = keys.openai;
   elevenKey = keys.eleven;
+  stopping  = false;
 
-  log("INFO", "Session startet (Whisper + GPT-4o-mini + ElevenLabs)...");
-
+  log("INFO", "Session startet (ElevenLabs Agent, live)...");
   setAnim("thinking");
 
+  // Mikrofon früh anfragen: klare Fehlermeldung + iOS braucht die User-Geste
   try {
-    mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const probe = await navigator.mediaDevices.getUserMedia({ audio: true });
+    probe.getTracks().forEach(t => t.stop()); // SDK holt sich das Mikro selbst
     log("INFO", "Mikrofon aktiv");
   } catch (e) {
     log("ERROR", "Mikrofon verweigert: " + e.message);
-
     setAnim("");
     return;
   }
 
-  // AudioContext für Silence-Detektion (iOS: resume nach User-Gesture nötig)
-  audioContext = new (window.AudioContext || window.webkitAudioContext)();
-  if (audioContext.state === "suspended") await audioContext.resume();
-  const source = audioContext.createMediaStreamSource(mediaStream);
-  analyser = audioContext.createAnalyser();
-  analyser.fftSize = 512;
-  source.connect(analyser);
-
-  // iOS: Audio-Element innerhalb der User-Gesture entsperren
-  // Ohne das blockt iOS alle play()-Aufrufe die asynchron (nach STT/GPT) kommen
+  // iOS: Audio-Element innerhalb der User-Geste entsperren (für den Abschieds-Sound)
   currentAudio = new Audio();
   currentAudio.play().catch(() => {});
   currentAudio.pause();
 
-  sessionActive = true;
-  conversationHistory = [];
+  try {
+    const agentId   = await ensureAgent();
+    const signedUrl = await getSignedUrl(agentId);
 
-  setAnim("");
+    const { Conversation } = await import(ELEVENLABS_SDK_URL);
 
-  // Begrüßung
-  await blibRespond("__greeting__");
+    conversation = await Conversation.startSession({
+      signedUrl,
+      connectionType: "websocket",
 
-  // Danach auf Luis warten
-  waitForSpeech();
-}
+      onConnect: () => {
+        log("INFO", "Live-Verbindung steht");
+        setAnim("");
+        setMicState("connected");
+      },
 
-// ── Auf Sprache warten (Silence → Speech Detektion) ───────
-function waitForSpeech() {
-  if (!sessionActive || blibSpeaking) return;
+      onDisconnect: () => {
+        if (stopping) return; // gewolltes Ende über stopSession
+        log("WARN", "Verbindung getrennt");
+        if (sessionActive) cleanupSession();
+      },
 
-  const buffer = new Float32Array(analyser.fftSize);
+      onError: (message) => {
+        log("ERROR", "Live-Fehler: " + message);
+        showError("Uups, ich war kurz abgelenkt!");
+      },
 
-  setMicState("connected");
-  setAnim("");
+      // Transkripte: source ist "user" oder "ai"
+      onMessage: ({ message, source }) => {
+        if (source === "user") {
+          log("LUIS", `"${message}"`);
+          if (isSleepCommand(message)) {
+            log("INFO", "Schlaf-Befehl erkannt — Session wird beendet");
+            stopSession();
+          }
+        } else {
+          log("BLIBU", `"${message}"`);
+        }
+      },
 
-  const interval = setInterval(() => {
-    if (!sessionActive || blibSpeaking || isRecording) { clearInterval(interval); return; }
+      // mode: "speaking" (Bibu redet) oder "listening" (Bibu hört zu)
+      onModeChange: ({ mode }) => {
+        if (stopping) return;
+        blibSpeaking = mode === "speaking";
+        if (blibSpeaking) {
+          setMicState("blibu-talking");
+          startMouthAnim();
+          setAnim("");
+        } else {
+          stopMouthAnim();
+          setMicState("connected");
+        }
+      },
+    });
 
-    analyser.getFloatTimeDomainData(buffer);
-    const rms = Math.sqrt(buffer.reduce((s, v) => s + v * v, 0) / buffer.length);
+    sessionActive = true;
+    startVolumeWatch();
 
-    if (rms > SILENCE_THRESHOLD) {
-      clearInterval(interval);
-      startRecording();
-    }
-  }, 50);
-}
-
-// ── Aufnahme starten ──────────────────────────────────────
-function startRecording() {
-  if (!sessionActive || isRecording) return;
-
-  isRecording    = true;
-  audioChunks    = [];
-  recordingStart = Date.now();
-
-  log("LUIS", "Luis spricht...");
-  setAnim("listening");
-  setMicState("user-talking");
-
-
-  // MediaRecorder: webm für alle, mp4 als iOS-Fallback
-  const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
-    ? "audio/webm;codecs=opus"
-    : MediaRecorder.isTypeSupported("audio/mp4")
-      ? "audio/mp4"
-      : "";
-
-  recorder = new MediaRecorder(mediaStream, mimeType ? { mimeType } : {});
-  recorderMimeType = recorder.mimeType || "audio/webm";
-  recorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunks.push(e.data); };
-  recorder.onstop = onRecordingStop;
-  recorder.start(100); // alle 100ms ein Chunk
-
-  // Silence-Detektion während der Aufnahme
-  monitorSilence();
-}
-
-// ── Stille während Aufnahme überwachen ────────────────────
-function monitorSilence() {
-  const buffer = new Float32Array(analyser.fftSize);
-
-  const interval = setInterval(() => {
-    if (!isRecording) { clearInterval(interval); return; }
-
-    analyser.getFloatTimeDomainData(buffer);
-    const rms = Math.sqrt(buffer.reduce((s, v) => s + v * v, 0) / buffer.length);
-
-    if (rms < SILENCE_THRESHOLD) {
-      if (!silenceTimer) {
-        silenceTimer = setTimeout(() => {
-          if (isRecording) stopRecording();
-        }, SILENCE_TIMEOUT_MS);
-      }
+  } catch (err) {
+    conversation = null;
+    setAnim("");
+    setMicState("idle");
+    if (!navigator.onLine || err instanceof TypeError) {
+      log("ERROR", "Keine Internetverbindung");
+      showError("Keine Internetverbindung");
     } else {
-      if (silenceTimer) { clearTimeout(silenceTimer); silenceTimer = null; }
+      log("ERROR", "Session-Start fehlgeschlagen: " + err.message);
+      showError("Uups, das hat nicht geklappt!");
     }
-  }, 50);
+  }
 }
 
-function stopRecording() {
-  if (!isRecording || !recorder) return;
-  isRecording = false;
-  if (silenceTimer) { clearTimeout(silenceTimer); silenceTimer = null; }
+// ── "Luis spricht"-Anzeige ────────────────────────────────
+// Das SDK meldet nur ob Bibu spricht/zuhört. Ob Luis gerade redet,
+// lesen wir aus der Mikro-Lautstärke.
+function startVolumeWatch() {
+  stopVolumeWatch();
+  let userTalking = false;
 
-  // Mindestdauer prüfen
-  const duration = Date.now() - recordingStart;
-  if (duration < MIN_RECORD_MS) {
-    // Zu kurz — ignorieren und neu warten
-    recorder.stop();
-    log("INFO", "Zu kurze Aufnahme ignoriert");
-    setTimeout(() => waitForSpeech(), 200);
-    return;
-  }
+  volumeTimer = setInterval(() => {
+    if (!sessionActive || !conversation || blibSpeaking) {
+      if (userTalking) { userTalking = false; }
+      return;
+    }
+    let vol = 0;
+    try { vol = conversation.getInputVolume() || 0; } catch (e) { /* noch nicht bereit */ }
 
-  recorder.stop();
+    const talking = vol > VOICE_THRESHOLD;
+    if (talking !== userTalking) {
+      userTalking = talking;
+      setMicState(talking ? "user-talking" : "connected");
+      setAnim(talking ? "listening" : "");
+    }
+  }, 150);
+}
+
+function stopVolumeWatch() {
+  if (volumeTimer) { clearInterval(volumeTimer); volumeTimer = null; }
 }
 
 // ── Schlaf-Erkennung ──────────────────────────────────────
@@ -196,123 +263,7 @@ function isSleepCommand(text) {
   return SLEEP_TRIGGERS.some(trigger => t.includes(trigger));
 }
 
-// ── Aufnahme verarbeiten ──────────────────────────────────
-async function onRecordingStop() {
-  if (!sessionActive) return;
-
-  const blob = new Blob(audioChunks, { type: recorderMimeType });
-  audioChunks = [];
-
-  setAnim("thinking");
-  setMicState("connected");
-
-  try {
-    // 1. Whisper STT
-    const transcript = await transcribeWithWhisper(blob);
-    if (!transcript || transcript.trim().length < 2) {
-      log("INFO", "Kein Text erkannt — neu warten");
-      waitForSpeech();
-      return;
-    }
-    log("LUIS", `"${transcript}"`);
-
-    // 2. Schlaf-Befehl? → Session beenden (stopSession sagt selbst Tschüss)
-    if (isSleepCommand(transcript)) {
-      log("INFO", "Schlaf-Befehl erkannt — Session wird beendet");
-      await stopSession();
-      return;
-    }
-
-    // 3. Normale Antwort
-    await blibRespond(transcript);
-
-  } catch (err) {
-    if (!navigator.onLine || err instanceof TypeError) {
-      log("ERROR", "Keine Internetverbindung");
-      showError("Keine Internetverbindung");
-      setTimeout(() => waitForSpeech(), 4500);
-    } else {
-      log("ERROR", "Verarbeitungsfehler: " + err.message);
-      setTimeout(() => waitForSpeech(), 1500);
-    }
-  }
-}
-
-// ── Whisper STT ───────────────────────────────────────────
-async function transcribeWithWhisper(blob) {
-  log("INFO", "Whisper transkribiert...");
-
-  const ext = blob.type.includes("mp4") ? "m4a" : "webm";
-  const formData = new FormData();
-  formData.append("file", blob, `audio.${ext}`);
-  formData.append("model", OPENAI_STT_MODEL);
-  formData.append("language", "de");
-
-  const res = await fetch("https://api.openai.com/v1/audio/transcriptions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${openaiKey}` },
-    body: formData,
-  });
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(`Whisper Fehler: ${res.status} — ${err.error?.message || ""}`);
-  }
-
-  const data = await res.json();
-  return data.text?.trim() || "";
-}
-
-// ── GPT-4o-mini ───────────────────────────────────────────
-async function askGPT(userMessage, maxTokens = 300) {
-  const isGreeting = userMessage === "__greeting__";
-  const message = isGreeting
-    ? "Begrüße Luis in 1-2 kurzen Sätzen!"
-    : userMessage;
-
-  // Greeting-Prompt nur für diese eine Anfrage, nicht in History speichern
-  const historyForApi = isGreeting
-    ? [...conversationHistory, { role: "user", content: message }]
-    : (conversationHistory.push({ role: "user", content: message }), conversationHistory);
-
-  // Maximal 10 Nachrichten im Verlauf behalten — in Paaren schneiden,
-  // damit die History nicht mit einem 'assistant'-Turn beginnt.
-  if (conversationHistory.length > 10) {
-    const drop = conversationHistory.length - 10;
-    conversationHistory = conversationHistory.slice(drop + (drop % 2));
-  }
-
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization:  `Bearer ${openaiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model:       OPENAI_LLM_MODEL,
-      max_tokens:  maxTokens,
-      temperature: 0.9,
-      messages: [
-        { role: "system", content: PERSONA },
-        ...historyForApi,
-      ],
-    }),
-  });
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(`GPT Fehler: ${res.status} — ${err.error?.message || ""}`);
-  }
-
-  const data  = await res.json();
-  const reply = data.choices[0]?.message?.content?.trim() || "Wubbeldiwupp!";
-
-  // Assistant-Turn nur speichern, wenn auch der User-Turn gespeichert wurde (kein Greeting)
-  if (!isGreeting) conversationHistory.push({ role: "assistant", content: reply });
-  return reply;
-}
-
-// ── ElevenLabs TTS ────────────────────────────────────────
+// ── ElevenLabs TTS (nur noch für den fixen Abschied) ──────
 async function speakWithElevenLabs(text) {
   const res = await fetch(
     `https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}/stream`,
@@ -339,69 +290,11 @@ async function speakWithElevenLabs(text) {
   return URL.createObjectURL(blob);
 }
 
-// ── Bibu antwortet ───────────────────────────────────────
-async function blibRespond(userMessage) {
-  if (!sessionActive) return;
-
-  blibSpeaking = true;
-  let netErr = false;
-  let apiErr = false;
-
-  try {
-    const reply = await askGPT(userMessage, userMessage === "__greeting__" ? 100 : 300);
-    if (!sessionActive) return; // Session wurde während GPT beendet
-
-    log("BLIBU", `"${reply}"`);
-
-    const audioUrl = await speakWithElevenLabs(reply);
-    if (!sessionActive) { URL.revokeObjectURL(audioUrl); return; } // Session wurde während TTS beendet
-
-    setMicState("blibu-talking");
-    startMouthAnim();
-    setAnim("");
-
-    await playAudio(audioUrl);
-
-  } catch (err) {
-    if (!navigator.onLine) {
-      log("ERROR", "Keine Internetverbindung");
-      netErr = true;
-    } else {
-      log("ERROR", "Antwort fehlgeschlagen: " + err.message);
-      apiErr = true;
-    }
-  } finally {
-    // Wenn stopSession mitten im Flow aufgerufen wurde, besitzt stopSession jetzt
-    // blibSpeaking + Mund-Animation für den Abschieds-Sound — nicht überschreiben.
-    if (!sessionActive) return;
-    blibSpeaking = false;
-    stopMouthAnim();
-    setAnim("happy");
-    setMicState("connected");
-    if (netErr)      showError("Keine Internetverbindung");
-    else if (apiErr) showError("Uups, ich war kurz abgelenkt!");
-    setTimeout(() => {
-      if (!sessionActive) return;
-      setAnim("");
-      waitForSpeech();
-    }, 900);
-  }
-}
-
-// ── Audio abspielen ───────────────────────────────────────
-// Wiederverwendet das in startSession entsperrte Audio-Element (iOS-Fix).
-// Löst ein laufendes playAudio-Promise auf bevor ein neues startet —
-// verhindert dass blibRespond ewig hängt wenn stopSession dazwischenkommt.
 function playAudio(url) {
   return new Promise((resolve) => {
-    // Hängendes Promise (z.B. von vorheriger Antwort) sauber beenden
-    if (resolvePendingAudio) { resolvePendingAudio(); resolvePendingAudio = null; }
-
     if (!currentAudio) { URL.revokeObjectURL(url); resolve(); return; }
 
-    resolvePendingAudio = resolve;
-
-    const done = () => { URL.revokeObjectURL(url); resolvePendingAudio = null; resolve(); };
+    const done = () => { URL.revokeObjectURL(url); resolve(); };
 
     currentAudio.pause();
     currentAudio.src = url;
@@ -415,41 +308,51 @@ function playAudio(url) {
   });
 }
 
+// ── Aufräumen (ohne Abschied) ─────────────────────────────
+function cleanupSession() {
+  sessionActive = false;
+  blibSpeaking  = false;
+  stopVolumeWatch();
+  stopMouthAnim();
+  conversation = null;
+  setAnim("schlaf");
+  setMicState("idle");
+}
+
 // ── Session beenden ───────────────────────────────────────
 export async function stopSession() {
-  if (!sessionActive) return;
+  if (!sessionActive || stopping) return;
+  stopping = true;
   log("INFO", "Session wird beendet");
 
   sessionActive = false;
-  blibSpeaking  = true;
-  isRecording   = false;
+  stopVolumeWatch();
 
-  if (silenceTimer) { clearTimeout(silenceTimer); silenceTimer = null; }
-  if (recorder)     { try { recorder.stop(); } catch(e) {} recorder = null; }
+  if (conversation) {
+    try { await conversation.endSession(); } catch (e) { /* Verbindung ggf. schon weg */ }
+    conversation = null;
+  }
 
-  // Sofortiger Abschied — kein GPT, fixer Text
+  // Fixer Abschied — deterministisch, kein Agent
+  blibSpeaking = true;
   try {
     const audioUrl = await speakWithElevenLabs("OK, ich gehe schlafen. Tschüss Luis!");
-    log("BIBU", '"OK, ich gehe schlafen. Tschüss Luis!"');
+    log("BLIBU", '"OK, ich gehe schlafen. Tschüss Luis!"');
     setMicState("blibu-talking");
     startMouthAnim();
     setAnim("");
     await playAudio(audioUrl);
-  } catch(e) {
+  } catch (e) {
     log("ERROR", "Abschied fehlgeschlagen: " + e.message);
   }
 
   blibSpeaking = false;
   stopMouthAnim();
   if (currentAudio) { currentAudio.onended = null; currentAudio.onerror = null; currentAudio.pause(); currentAudio = null; }
-  if (audioContext) { audioContext.close(); audioContext = null; }
-  if (mediaStream)  { mediaStream.getTracks().forEach(t => t.stop()); mediaStream = null; }
-
-  conversationHistory = [];
 
   setAnim("schlaf");
   setMicState("idle");
-
+  stopping = false;
 
   log("INFO", "Session beendet");
 }
@@ -467,10 +370,11 @@ export function charTap() {
 
   setTimeout(() => {
     acroPlaying = false;
-    if (sessionActive) {
+    if (sessionActive && conversation) {
       setAnim('');
       log("LUIS", "Luis hat Bibu angetippt");
-      blibRespond("Luis hat Bibu gekitzelt!");
+      try { conversation.sendUserMessage("Luis hat dich gerade gekitzelt!"); }
+      catch (e) { log("ERROR", "Kitzel-Nachricht fehlgeschlagen: " + e.message); }
     } else {
       setAnim('schlaf');
     }

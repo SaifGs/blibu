@@ -2,9 +2,14 @@
 // config.js — Zentrale Konfiguration
 // ══════════════════════════════════════════════════════════
 
-// ── OpenAI ────────────────────────────────────────────────
-export const OPENAI_STT_MODEL = "whisper-1";      // Spracherkennung (sehr gut für Kinder)
-export const OPENAI_LLM_MODEL = "gpt-4o-mini";   // Günstig & schnell & smart
+// ── ElevenLabs Agent (Live-Konversation) ──────────────────
+// Das SDK wird zur Laufzeit vom CDN geladen (Version gepinnt).
+export const ELEVENLABS_SDK_URL = "https://cdn.jsdelivr.net/npm/@elevenlabs/client@1.14.1/+esm";
+
+export const AGENT_NAME = "Bibu";
+export const AGENT_LLM  = "gpt-4o-mini";   // läuft bei ElevenLabs, wird dort mit abgerechnet
+export const AGENT_LANGUAGE = "de";
+export const FIRST_MESSAGE  = "Jouchuuu! Hallo Luis! Ich bin wach! Was machen wir heute?";
 
 // ── ElevenLabs Stimme ──────────────────────────────────────
 export const ELEVENLABS_VOICE_ID = "7Nj1UduP6iY6hWpEDibS"; // bibi blume
@@ -16,14 +21,13 @@ export const ELEVENLABS_SETTINGS = {
   use_speaker_boost: true,
 };
 
-// ── Aufnahme-Einstellungen ─────────────────────────────────
-export const SILENCE_TIMEOUT_MS = 900;    // ms Stille bis Aufnahme endet
-export const SILENCE_THRESHOLD  = 0.015;  // Lautstärke-Schwelle (0–1)
-export const MIN_RECORD_MS      = 400;    // Mindest-Aufnahmedauer
+// ── Sprech-Anzeige ─────────────────────────────────────────
+export const VOICE_THRESHOLD = 0.05; // Mikro-Lautstärke (0–1) ab der "Luis spricht" angezeigt wird
 
 // ── localStorage Keys ─────────────────────────────────────
-export const STORAGE_KEY_OPENAI     = "bibu_openai_key";
 export const STORAGE_KEY_ELEVENLABS = "bibu_elevenlabs_key";
+export const STORAGE_KEY_AGENT_ID   = "bibu_agent_id";
+export const STORAGE_KEY_AGENT_HASH = "bibu_agent_hash";
 export const STORAGE_LOG_KEY        = "bibu_log";
 export const LOG_MAX_ENTRIES        = 500;
 
@@ -50,6 +54,7 @@ SPRACHE:
 - Vergleiche benutzen: "Das ist wie wenn..." oder "Stell dir vor..."
 - Bei Erklaerungen: bis zu 6 Saetze erlaubt
 - Bei normalen Antworten: 2-3 Saetze
+- Du sprichst mit Luis live — er ist 4, er redet manchmal undeutlich oder mitten in deinen Satz. Bleib geduldig und frag freundlich nach wenn du ihn nicht verstehst
 
 ERKLAERUNGEN (wenn Luis etwas fragt):
 - Erklaere wirklich — kein Ausweichen

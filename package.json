@@ -1,7 +1,7 @@
 {
   "name": "bibu",
-  "version": "2.0.0",
-  "description": "Bibu — KI-Freund für Luis. Whisper STT + GPT-4o-mini + ElevenLabs TTS.",
+  "version": "3.0.0",
+  "description": "Bibu — KI-Freund für Luis. Live Speech-to-Speech über ElevenLabs Agents (Bibi-Blume-Stimme, gpt-4o-mini).",
   "type": "module",
   "scripts": {
     "start": "npx serve .",
@@ -11,7 +11,7 @@
     "type": "git",
     "url": "git+https://github.com/SaifGs/blibu.git"
   },
-  "keywords": ["kids", "ai", "openai", "whisper"],
+  "keywords": ["kids", "ai", "elevenlabs", "conversational-ai", "voice-agent"],
   "author": "",
   "license": "ISC",
   "dependencies": {}

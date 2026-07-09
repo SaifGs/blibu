@@ -143,13 +143,9 @@
 <div class="overlay" id="overlay">
   <div class="setup-box">
     <h2>Hallo Papa! 👋</h2>
-    <p>Gib deine API Keys ein damit Bibu mit Luis sprechen kann.</p>
+    <p>Gib deinen API Key ein damit Bibu mit Luis sprechen kann.</p>
 
-    <span class="label">🤖 OpenAI API Key (Whisper + GPT)</span>
-    <input type="password" id="openai-key-input" placeholder="sk-..."
-      autocomplete="off" spellcheck="false"/>
-
-    <span class="label">🔊 ElevenLabs API Key (Kinderstimme)</span>
+    <span class="label">🔊 ElevenLabs API Key (Live-Gespräch + Kinderstimme)</span>
     <input type="password" id="eleven-key-input" placeholder="..."
       autocomplete="off" spellcheck="false"
       onkeydown="if(event.key==='Enter') saveKey()"/>
@@ -157,11 +153,12 @@
     <button class="save-btn" onclick="saveKey()">Bibu starten! 🚀</button>
     <div class="err" id="key-err"></div>
     <div class="hint">
-      OpenAI Key: <strong>platform.openai.com</strong> → API keys<br>
       ElevenLabs Key: <strong>elevenlabs.io</strong> → Profile → API Key<br>
-      Beide Keys werden nur lokal auf diesem Gerät gespeichert.
+      Bibu spricht live über ElevenLabs Agents — beim ersten Start wird
+      der Agent automatisch angelegt.<br>
+      Der Key wird nur lokal auf diesem Gerät gespeichert.
     </div>
-    <span class="reset-link" onclick="showResetConfirm()">Keys loeschen / aendern</span>
+    <span class="reset-link" onclick="showResetConfirm()">Key loeschen / aendern</span>
   </div>
 </div>
 
